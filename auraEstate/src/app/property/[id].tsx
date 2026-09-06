@@ -1,0 +1,939 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Image,
+  Dimensions,
+  ActivityIndicator,
+  Linking,
+  Platform,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { AuraColors } from '../../constants/colors';
+import { useAuth } from '../../context/AuthContext';
+import { fetchPropertyById, fetchSimilarProperties, generatePropertyAppraisal } from '../../services/api';
+import PropertyCard from '../../components/PropertyCard';
+import EMICalculator from '../../components/EMICalculator';
+import AppraisalReportModal from '../../components/AppraisalReportModal';
+import OfferModal from '../../components/OfferModal';
+import InspectionBookingModal from '../../components/InspectionBookingModal';
+import PaymentModal from '../../components/PaymentModal';
+import LiveChatModal from '../../components/LiveChatModal';
+
+const { width } = Dimensions.get('window');
+
+const NEARBY_SCHOOLS = [
+  { name: 'Local Public School', type: 'Public Primary', rating: '4.8', distance: '0.8 km' },
+  { name: 'High School Academy', type: 'Public Secondary', rating: '4.5', distance: '1.2 km' },
+  { name: 'Grammar College', type: 'Private Co-ed', rating: '4.9', distance: '1.6 km' },
+];
+
+export default function PropertyDetailScreen() {
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { toggleSavedProperty, isSaved } = useAuth();
+
+  const [property, setProperty] = useState<any | null>(null);
+  const [similarProperties, setSimilarProperties] = useState<any[]>([]);
+  const [activeImage, setActiveImage] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Modals state
+  const [appraisalReport, setAppraisalReport] = useState<any | null>(null);
+  const [appraisalModalOpen, setAppraisalModalOpen] = useState<boolean>(false);
+  const [appraisalLoading, setAppraisalLoading] = useState<boolean>(false);
+
+  const [offerModalOpen, setOfferModalOpen] = useState<boolean>(false);
+  const [bookingModalOpen, setBookingModalOpen] = useState<boolean>(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState<boolean>(false);
+  const [chatModalOpen, setChatModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const loadDetail = async () => {
+      setLoading(true);
+      try {
+        const res = await fetchPropertyById(id);
+        if (res.data?.success) {
+          setProperty(res.data.property);
+        }
+
+        const simRes = await fetchSimilarProperties(id).catch(() => ({ data: { success: false } }));
+        if (simRes.data?.success) {
+          setSimilarProperties(simRes.data.properties || []);
+        }
+      } catch (err) {
+        console.error('Failed to load property details', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDetail();
+  }, [id]);
+
+  const handleGenerateAppraisal = async () => {
+    if (!id) return;
+    setAppraisalLoading(true);
+    try {
+      const res = await generatePropertyAppraisal(id);
+      if (res.data?.success && res.data.report) {
+        setAppraisalReport(res.data.report);
+        setAppraisalModalOpen(true);
+      } else {
+        alert('Could not generate appraisal report.');
+      }
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Error generating AI appraisal.');
+    } finally {
+      setAppraisalLoading(false);
+    }
+  };
+
+  const handleCallAgent = (phone?: string) => {
+    const num = phone || '+61480089451';
+    Linking.openURL(`tel:${num}`);
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={AuraColors.primary} />
+        <Text style={styles.loadingText}>Loading Property Details...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!property) {
+    return (
+      <SafeAreaView style={styles.centerContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color={AuraColors.rose} />
+        <Text style={styles.notFoundTitle}>Property Not Found</Text>
+        <Pressable style={styles.backHomeBtn} onPress={() => router.back()}>
+          <Text style={styles.backHomeBtnText}>Go Back</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
+
+  const saved = isSaved(property._id);
+  const images =
+    property.images && property.images.length > 0
+      ? property.images
+      : ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1200'];
+
+  const formattedPrice = property.price
+    ? `$${property.price.toLocaleString()}${
+        property.listingType === 'Rent' || property.pricePeriod === 'weekly' ? ' / week' : ''
+      }`
+    : 'Contact Agent';
+
+  const agent = property.agentId || {
+    name: 'Samantha Reed',
+    role: 'Lead Sales Agent',
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=300',
+    phone: '+61 480 089 451',
+  };
+
+  return (
+    <SafeAreaView style={styles.safeContainer}>
+      {/* Top Floating Nav Bar */}
+      <View style={styles.topNav}>
+        <Pressable style={styles.navCircleBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={20} color={AuraColors.text} />
+        </Pressable>
+        <Pressable
+          style={[styles.navCircleBtn, saved && styles.navCircleBtnSaved]}
+          onPress={() => toggleSavedProperty(property._id)}
+        >
+          <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? '#ffffff' : AuraColors.text} />
+        </Pressable>
+      </View>
+
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Main Image Gallery Carousel */}
+        <View style={styles.galleryContainer}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={(e) => {
+              const x = e.nativeEvent.contentOffset.x;
+              setActiveImage(Math.round(x / width));
+            }}
+            scrollEventThrottle={16}
+          >
+            {images.map((img: string, i: number) => (
+              <Image key={i} source={{ uri: img }} style={styles.galleryMainImage} resizeMode="cover" />
+            ))}
+          </ScrollView>
+
+          {/* Dots Indicator */}
+          <View style={styles.dotsRow}>
+            {images.map((_: any, i: number) => (
+              <View key={i} style={[styles.dot, activeImage === i && styles.dotActive]} />
+            ))}
+          </View>
+        </View>
+
+        {/* Header Details */}
+        <View style={styles.headerSection}>
+          <View style={styles.badgeRow}>
+            <View style={styles.listingBadge}>
+              <Text style={styles.listingBadgeText}>
+                {property.listingType === 'Sale' ? 'BUY' : property.listingType} • {property.propertyType}
+              </Text>
+            </View>
+            <Text style={styles.priceText}>{formattedPrice}</Text>
+          </View>
+
+          <Text style={styles.titleText}>{property.title}</Text>
+
+          <View style={styles.addressRow}>
+            <Ionicons name="location" size={16} color={AuraColors.primary} />
+            <Text style={styles.addressText}>
+              {property.address?.street}, {property.address?.suburb} {property.address?.state}{' '}
+              {property.address?.postcode}
+            </Text>
+          </View>
+        </View>
+
+        {/* Key Specs Bar */}
+        <View style={styles.specsBar}>
+          <View style={styles.specColumn}>
+            <Ionicons name="bed-outline" size={20} color={AuraColors.primary} />
+            <Text style={styles.specVal}>{property.bedrooms || 3}</Text>
+            <Text style={styles.specUnit}>Beds</Text>
+          </View>
+          <View style={styles.specColumn}>
+            <Ionicons name="water-outline" size={20} color={AuraColors.primary} />
+            <Text style={styles.specVal}>{property.bathrooms || 2}</Text>
+            <Text style={styles.specUnit}>Baths</Text>
+          </View>
+          <View style={styles.specColumn}>
+            <Ionicons name="car-outline" size={20} color={AuraColors.primary} />
+            <Text style={styles.specVal}>{property.parkingSpaces || 1}</Text>
+            <Text style={styles.specUnit}>Cars</Text>
+          </View>
+          <View style={styles.specColumn}>
+            <Ionicons name="scan-outline" size={20} color={AuraColors.primary} />
+            <Text style={styles.specVal}>{property.landArea || 450}m²</Text>
+            <Text style={styles.specUnit}>Land</Text>
+          </View>
+          <View style={styles.specColumn}>
+            <Ionicons name="calendar-outline" size={20} color={AuraColors.primary} />
+            <Text style={styles.specVal}>{property.yearBuilt || 2022}</Text>
+            <Text style={styles.specUnit}>Built</Text>
+          </View>
+        </View>
+
+        {/* AI Appraisal Action Card */}
+        <View style={styles.appraisalCard}>
+          <View style={styles.appraisalHeader}>
+            <View style={styles.aiBadge}>
+              <Ionicons name="sparkles" size={14} color={AuraColors.primaryDark} />
+              <Text style={styles.aiBadgeText}>AI VALUATION</Text>
+            </View>
+            <Text style={styles.appraisalTitle}>Certified Property Appraisal</Text>
+            <Text style={styles.appraisalSubtitle}>
+              Generate an instant ML-powered valuation report comparing 50+ recent suburb settlements.
+            </Text>
+          </View>
+          <Pressable
+            style={styles.generateAppraisalBtn}
+            onPress={handleGenerateAppraisal}
+            disabled={appraisalLoading}
+          >
+            {appraisalLoading ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="document-text-outline" size={16} color="#ffffff" />
+                <Text style={styles.generateAppraisalBtnText}>View AI Appraisal Report</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+
+        {/* Inspection Schedule */}
+        <View style={styles.sectionCard}>
+          <View style={styles.cardHeaderRow}>
+            <Ionicons name="time-outline" size={20} color={AuraColors.emerald} />
+            <Text style={styles.cardHeaderTitle}>Upcoming Inspection Times</Text>
+          </View>
+          <View style={styles.inspectionSlot}>
+            <View>
+              <Text style={styles.slotDay}>Saturday, 21 Aug</Text>
+              <Text style={styles.slotHours}>10:00 AM - 10:30 AM</Text>
+            </View>
+            <Pressable style={styles.bookSlotBtn} onPress={() => setBookingModalOpen(true)}>
+              <Text style={styles.bookSlotBtnText}>Book Private Slot</Text>
+            </Pressable>
+          </View>
+          <View style={styles.inspectionSlot}>
+            <View>
+              <Text style={styles.slotDay}>Wednesday, 25 Aug</Text>
+              <Text style={styles.slotHours}>05:00 PM - 05:30 PM</Text>
+            </View>
+            <Pressable style={styles.bookSlotBtn} onPress={() => setBookingModalOpen(true)}>
+              <Text style={styles.bookSlotBtnText}>Book Private Slot</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* About Property */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>About the Property</Text>
+          <Text style={styles.descriptionText}>{property.description}</Text>
+        </View>
+
+        {/* Property Attributes Table */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Property Details</Text>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Property Type</Text>
+            <Text style={styles.tableValue}>{property.propertyType}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Listing Intent</Text>
+            <Text style={styles.tableValue}>{property.listingType}</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Land Size</Text>
+            <Text style={styles.tableValue}>{property.landArea || 450} m²</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableLabel}>Council Rates</Text>
+            <Text style={styles.tableValue}>$450 / quarter (approx)</Text>
+          </View>
+          <View style={[styles.tableRow, { borderBottomWidth: 0 }]}>
+            <Text style={styles.tableLabel}>Year Built</Text>
+            <Text style={styles.tableValue}>{property.yearBuilt || 2022}</Text>
+          </View>
+        </View>
+
+        {/* Features Checklist */}
+        {property.features && property.features.length > 0 && (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Features & Amenities</Text>
+            <View style={styles.featuresGrid}>
+              {property.features.map((f: string, i: number) => (
+                <View key={i} style={styles.featureItem}>
+                  <Ionicons name="checkmark-circle" size={16} color={AuraColors.primary} />
+                  <Text style={styles.featureText}>{f}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Nearby Schools */}
+        <View style={styles.sectionCard}>
+          <View style={styles.cardHeaderRow}>
+            <Ionicons name="school-outline" size={20} color={AuraColors.primary} />
+            <Text style={styles.cardHeaderTitle}>Nearby Schools & Education</Text>
+          </View>
+          {NEARBY_SCHOOLS.map((school, i) => (
+            <View key={i} style={styles.schoolItem}>
+              <View>
+                <Text style={styles.schoolName}>{school.name}</Text>
+                <Text style={styles.schoolType}>{school.type}</Text>
+              </View>
+              <View style={styles.schoolRight}>
+                <Text style={styles.schoolDist}>{school.distance}</Text>
+                <Text style={styles.schoolRating}>⭐ {school.rating}/5</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Mortgage / EMI Calculator */}
+        <EMICalculator defaultPrice={property.price || 1500000} />
+
+        {/* Agent Contact Card */}
+        <View style={styles.agentCard}>
+          <Image source={{ uri: agent.avatar }} style={styles.agentAvatar} />
+          <View style={styles.agentInfo}>
+            <Text style={styles.agentName}>{agent.name}</Text>
+            <Text style={styles.agentRole}>{property.agencyId?.name || 'Verified Sales Executive'}</Text>
+          </View>
+          <View style={styles.agentActionsRow}>
+            <Pressable style={styles.agentCallBtn} onPress={() => handleCallAgent(agent.phone)}>
+              <Ionicons name="call" size={16} color={AuraColors.text} />
+              <Text style={styles.agentCallBtnText}>Call</Text>
+            </Pressable>
+            <Pressable style={styles.agentMsgBtn} onPress={() => setChatModalOpen(true)}>
+              <Ionicons name="chatbubbles" size={16} color="#ffffff" />
+              <Text style={styles.agentMsgBtnText}>Live Chat</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Suburb Insights Link */}
+        {property.address?.suburb && (
+          <Pressable
+            style={styles.suburbInsightsBtn}
+            onPress={() => router.push(`/suburbs/${encodeURIComponent(property.address.suburb)}` as any)}
+          >
+            <Ionicons name="stats-chart" size={18} color={AuraColors.primaryDark} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.suburbInsightsTitle}>Explore {property.address.suburb} Suburb Profile</Text>
+              <Text style={styles.suburbInsightsSub}>Median prices, annual growth rates, and demographics</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={AuraColors.primaryDark} />
+          </Pressable>
+        )}
+
+        {/* Similar Properties */}
+        {similarProperties.length > 0 && (
+          <View style={styles.similarSection}>
+            <Text style={styles.sectionTitle}>Similar Properties</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+              {similarProperties.map((p) => (
+                <PropertyCard key={p._id} property={p} compact />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Fixed Bottom Action Bar */}
+      <View style={styles.bottomBar}>
+        <Pressable style={styles.offerActionBtn} onPress={() => setOfferModalOpen(true)}>
+          <Ionicons name="document-text-outline" size={18} color={AuraColors.primaryDark} />
+          <Text style={styles.offerActionBtnText}>Make Offer</Text>
+        </Pressable>
+        <Pressable style={styles.reserveActionBtn} onPress={() => setPaymentModalOpen(true)}>
+          <Ionicons name="lock-closed" size={16} color="#ffffff" />
+          <Text style={styles.reserveActionBtnText}>Reserve ($5k)</Text>
+        </Pressable>
+      </View>
+
+      {/* Modals */}
+      <AppraisalReportModal
+        visible={appraisalModalOpen}
+        onClose={() => setAppraisalModalOpen(false)}
+        reportData={appraisalReport}
+      />
+      <OfferModal
+        visible={offerModalOpen}
+        onClose={() => setOfferModalOpen(false)}
+        property={property}
+      />
+      <InspectionBookingModal
+        visible={bookingModalOpen}
+        onClose={() => setBookingModalOpen(false)}
+        property={property}
+      />
+      <PaymentModal
+        visible={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        defaultPackage="Holding Deposit"
+        defaultAmount={5000}
+        propertyId={property._id}
+      />
+      <LiveChatModal
+        visible={chatModalOpen}
+        onClose={() => setChatModalOpen(false)}
+        agent={agent}
+        property={property}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: AuraColors.textMuted,
+    fontWeight: '600',
+  },
+  notFoundTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: AuraColors.text,
+  },
+  backHomeBtn: {
+    backgroundColor: AuraColors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 6,
+  },
+  backHomeBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  topNav: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 44 : 20,
+    left: 16,
+    right: 16,
+    zIndex: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  navCircleBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  navCircleBtnSaved: {
+    backgroundColor: AuraColors.rose,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  galleryContainer: {
+    width: '100%',
+    height: 280,
+    position: 'relative',
+    backgroundColor: '#0f172a',
+  },
+  galleryMainImage: {
+    width: width,
+    height: 280,
+  },
+  dotsRow: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  dotActive: {
+    width: 18,
+    backgroundColor: AuraColors.primary,
+  },
+  headerSection: {
+    padding: 20,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  listingBadge: {
+    backgroundColor: AuraColors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  listingBadgeText: {
+    color: AuraColors.primaryDark,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  priceText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: AuraColors.primaryDark,
+  },
+  titleText: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: AuraColors.text,
+    letterSpacing: -0.3,
+    marginBottom: 6,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  addressText: {
+    fontSize: 13,
+    color: AuraColors.textMuted,
+    fontWeight: '500',
+    flex: 1,
+  },
+  specsBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#f8fafc',
+    paddingVertical: 14,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  specColumn: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  specVal: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: AuraColors.text,
+  },
+  specUnit: {
+    fontSize: 10,
+    color: AuraColors.textMuted,
+    fontWeight: '600',
+  },
+  appraisalCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: AuraColors.primaryLight,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+  appraisalHeader: {
+    marginBottom: 12,
+  },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  aiBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: AuraColors.primaryDark,
+  },
+  appraisalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: AuraColors.text,
+  },
+  appraisalSubtitle: {
+    fontSize: 12,
+    color: AuraColors.textMuted,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  generateAppraisalBtn: {
+    backgroundColor: AuraColors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  generateAppraisalBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  sectionCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: AuraColors.cardBorder,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  cardHeaderTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: AuraColors.text,
+  },
+  inspectionSlot: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 8,
+  },
+  slotDay: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: AuraColors.text,
+  },
+  slotHours: {
+    fontSize: 11,
+    color: AuraColors.textMuted,
+    marginTop: 2,
+  },
+  bookSlotBtn: {
+    backgroundColor: AuraColors.emeraldLight,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: AuraColors.emeraldBorder,
+  },
+  bookSlotBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: AuraColors.emerald,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: AuraColors.text,
+    marginBottom: 10,
+  },
+  descriptionText: {
+    fontSize: 13,
+    color: AuraColors.textSecondary,
+    lineHeight: 20,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  tableLabel: {
+    fontSize: 12,
+    color: AuraColors.textMuted,
+  },
+  tableValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: AuraColors.text,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  featureText: {
+    fontSize: 12,
+    color: AuraColors.textSecondary,
+    fontWeight: '600',
+  },
+  schoolItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  schoolName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: AuraColors.text,
+  },
+  schoolType: {
+    fontSize: 10,
+    color: AuraColors.textMuted,
+    marginTop: 1,
+  },
+  schoolRight: {
+    alignItems: 'flex-end',
+  },
+  schoolDist: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: AuraColors.text,
+  },
+  schoolRating: {
+    fontSize: 10,
+    color: AuraColors.amber,
+    marginTop: 1,
+  },
+  agentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: AuraColors.cardBorder,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    gap: 12,
+  },
+  agentAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#e2e8f0',
+  },
+  agentInfo: {
+    flex: 1,
+  },
+  agentName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: AuraColors.text,
+  },
+  agentRole: {
+    fontSize: 11,
+    color: AuraColors.primaryDark,
+    fontWeight: '600',
+  },
+  agentActionsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  agentCallBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#f1f5f9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  agentCallBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: AuraColors.text,
+  },
+  agentMsgBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: AuraColors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  agentMsgBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  suburbInsightsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: AuraColors.primaryLight,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 18,
+  },
+  suburbInsightsTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: AuraColors.primaryDark,
+  },
+  suburbInsightsSub: {
+    fontSize: 11,
+    color: AuraColors.textMuted,
+    marginTop: 2,
+  },
+  similarSection: {
+    marginHorizontal: 16,
+    marginTop: 20,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 14,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  offerActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: AuraColors.primaryLight,
+    borderWidth: 1,
+    borderColor: AuraColors.primary,
+  },
+  offerActionBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: AuraColors.primaryDark,
+  },
+  reserveActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: AuraColors.primary,
+    shadowColor: AuraColors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  reserveActionBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+});
