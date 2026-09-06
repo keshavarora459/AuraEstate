@@ -12,94 +12,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../../constants/colors';
-import { fetchProperties } from '../../services/api';
+import { fetchProperties, fetchSuburbByName } from '../../services/api';
 import PropertyCard from '../../components/PropertyCard';
-
-const SUBURB_STATS: Record<string, any> = {
-  'Point Piper': {
-    medianHouse: 18500000,
-    medianUnit: 4200000,
-    clearanceRate: 82,
-    daysOnMarket: 41,
-    growth: 12.4,
-    trend: 'up',
-    description:
-      "Point Piper is one of Sydney's most prestigious harbourside suburbs, consistently ranking among Australia's most expensive postcodes. Offering direct deep-water harbour access and panoramic Sydney Harbour Bridge views.",
-  },
-  'Barangaroo': {
-    medianHouse: null,
-    medianUnit: 2850000,
-    clearanceRate: 78,
-    daysOnMarket: 33,
-    growth: 9.1,
-    trend: 'up',
-    description:
-      "Barangaroo is a world-class urban renewal precinct on Sydney Harbour's western edge, boasting high-rise architectural sky penthouses and Michelin-level waterfront dining.",
-  },
-  'Bondi Beach': {
-    medianHouse: 4800000,
-    medianUnit: 1650000,
-    clearanceRate: 74,
-    daysOnMarket: 38,
-    growth: 7.2,
-    trend: 'up',
-    description:
-      "Bondi Beach is one of Australia's most iconic coastal suburbs, famous for golden surf, lively lifestyle cafés, and prestigious beachfront apartments.",
-  },
-  'Mosman': {
-    medianHouse: 5200000,
-    medianUnit: 1350000,
-    clearanceRate: 76,
-    daysOnMarket: 44,
-    growth: 6.8,
-    trend: 'up',
-    description:
-      'Mosman is an affluent Lower North Shore enclave renowned for historic Federation mansions, prestigious private academies, and tranquil harbour views.',
-  },
-  'Toorak': {
-    medianHouse: 5900000,
-    medianUnit: 1200000,
-    clearanceRate: 73,
-    daysOnMarket: 52,
-    growth: 4.2,
-    trend: 'up',
-    description:
-      "Toorak is Melbourne's most exclusive luxury suburb, featuring grand Victorian estates, tree-lined boulevards, and Australia's highest density of private wealth.",
-  },
-  'Noosa Heads': {
-    medianHouse: 3200000,
-    medianUnit: 1100000,
-    clearanceRate: 68,
-    daysOnMarket: 47,
-    growth: 8.6,
-    trend: 'up',
-    description:
-      'Noosa Heads offers ultra-luxury coastal living along the Sunshine Coast, renowned for Hastings Street boutiques and pristine national park headlands.',
-  },
-  'default': {
-    medianHouse: 1800000,
-    medianUnit: 720000,
-    clearanceRate: 65,
-    daysOnMarket: 42,
-    growth: 5.1,
-    trend: 'up',
-    description:
-      'A sought-after Australian suburb offering a compelling mix of lifestyle, investment potential, and community character.',
-  },
-};
-
-const NEARBY_SCHOOLS = [
-  { name: 'Ascham School', type: 'Private Girls', rating: '4.8', distance: '0.8 km' },
-  { name: 'Cranbrook School', type: 'Private Boys', rating: '4.7', distance: '1.2 km' },
-  { name: 'Sydney Grammar School', type: 'Private Co-ed', rating: '4.9', distance: '1.6 km' },
-];
 
 export default function SuburbProfileScreen() {
   const router = useRouter();
   const { name } = useLocalSearchParams<{ name: string }>();
   const suburb = decodeURIComponent(name || 'Point Piper');
-  const stats = SUBURB_STATS[suburb] || SUBURB_STATS['default'];
 
+  const [stats, setStats] = useState<any>({
+    medianHouse: null,
+    medianUnit: null,
+    clearanceRate: 70,
+    daysOnMarket: 40,
+    growth: 5.0,
+    description: '',
+    image: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=1000',
+  });
+  const [schools, setSchools] = useState<any[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -107,12 +37,23 @@ export default function SuburbProfileScreen() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetchProperties({ suburb, limit: 6 });
-        if (res.data?.success) {
-          setProperties(res.data.properties || []);
+        const [profileRes, propRes] = await Promise.all([
+          fetchSuburbByName(suburb).catch(() => null),
+          fetchProperties({ suburb, limit: 6 }).catch(() => null),
+        ]);
+
+        if (profileRes?.data?.success && profileRes.data.suburb) {
+          setStats(profileRes.data.suburb);
+          if (profileRes.data.suburb.nearbySchools) {
+            setSchools(profileRes.data.suburb.nearbySchools);
+          }
+        }
+
+        if (propRes?.data?.success) {
+          setProperties(propRes.data.properties || []);
         }
       } catch (e) {
-        console.error('Suburb load error', e);
+        console.warn('Suburb load error (backend may be offline):', e);
       } finally {
         setLoading(false);
       }
@@ -139,7 +80,7 @@ export default function SuburbProfileScreen() {
         <View style={styles.heroCard}>
           <Image
             source={{
-              uri: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=1000',
+              uri: stats.image || 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=1000',
             }}
             style={styles.heroImage}
           />
@@ -149,7 +90,7 @@ export default function SuburbProfileScreen() {
               <Ionicons name="location" size={12} color="#ffffff" />
               <Text style={styles.suburbBadgeText}>SUBURB PROFILE</Text>
             </View>
-            <Text style={styles.suburbTitle}>{suburb}</Text>
+            <Text style={styles.suburbTitle}>{stats.name || suburb}</Text>
           </View>
         </View>
 
@@ -176,24 +117,30 @@ export default function SuburbProfileScreen() {
         {/* Suburb Summary */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Overview & Demographics</Text>
-          <Text style={styles.descriptionText}>{stats.description}</Text>
+          <Text style={styles.descriptionText}>{stats.description || 'Exclusive Australian residential precinct.'}</Text>
         </View>
 
         {/* Prestigious Nearby Schools */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Top Nearby Schools</Text>
-          {NEARBY_SCHOOLS.map((school, i) => (
-            <View key={i} style={styles.schoolItem}>
-              <View>
-                <Text style={styles.schoolName}>{school.name}</Text>
-                <Text style={styles.schoolType}>{school.type}</Text>
+          {schools.length === 0 ? (
+            <Text style={{ color: AuraColors.textMuted, fontSize: 13, marginVertical: 8 }}>
+              School catchment records loading or none listed for this suburb.
+            </Text>
+          ) : (
+            schools.map((school: any, i: number) => (
+              <View key={i} style={styles.schoolItem}>
+                <View>
+                  <Text style={styles.schoolName}>{school.name}</Text>
+                  <Text style={styles.schoolType}>{school.type}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.schoolDist}>{school.distance}</Text>
+                  <Text style={styles.schoolRating}>⭐ {school.rating}/5</Text>
+                </View>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.schoolDist}>{school.distance}</Text>
-                <Text style={styles.schoolRating}>⭐ {school.rating}/5</Text>
-              </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* Active Suburb Properties */}

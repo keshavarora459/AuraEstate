@@ -40,92 +40,14 @@ interface Article {
   featured?: boolean;
 }
 
-const CURATED_REAL_ESTATE_ARTICLES: Article[] = [
-  {
-    _id: 're-1',
-    title: 'Australian Property Market Outlook 2026: Trends & Growth Suburbs',
-    excerpt: 'An in-depth analysis of interest rate trajectory, suburb price performance, and key demographic shifts shaping 2026 luxury real estate.',
-    content: 'The Australian housing market has shown resilient performance entering 2026 with strong demand driven by low inventory levels and high international migration. Prime waterfront precincts across Sydney, Melbourne, and South-East Queensland continue to lead price appreciation. Capital growth has accelerated in coastal corridors as high-net-worth buyers prioritize lifestyle amenities, eco-efficiency, and smart home technology.',
-    category: 'Market Insights',
-    author: 'Chief Economist Editorial',
-    image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=1200',
-    readTime: '5 min read',
-    createdAt: '2026-08-01T10:00:00.000Z',
-    featured: true,
-  },
-  {
-    _id: 're-2',
-    title: 'Top 5 Renovation Projects That Boost Property Valuation',
-    excerpt: 'Discover which high-end home upgrades yield the highest ROI when preparing your premium residential listing for auction.',
-    content: 'When preparing to sell a luxury residence, strategic renovations dramatically increase buyer competition and push auction bids higher. Open-plan kitchen modernizations with stone waterfall islands, architectural landscape lighting, smart home automation, and energy-efficient solar plus storage systems lead the market in return on investment.',
-    category: 'Sellers Guide',
-    author: 'Design & Living Team',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1200',
-    readTime: '4 min read',
-    createdAt: '2026-08-02T12:30:00.000Z',
-  },
-  {
-    _id: 're-3',
-    title: 'Why Commercial Real Estate is Rebounding in Q3 2026',
-    excerpt: 'Institutional investors are returning to prime CBD office towers and boutique retail hubs across Sydney and Melbourne.',
-    content: 'Commercial property investments are undergoing a structural resurgence as premium office spaces pivot toward high-amenity workplace experiences. Flexible executive suites, wellness spaces, and ESG-compliant green building designs are commanding premium rental yields.',
-    category: 'Investment Analysis',
-    author: 'Financial Advisory Hub',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200',
-    readTime: '6 min read',
-    createdAt: '2026-08-03T09:15:00.000Z',
-  },
-  {
-    _id: 're-4',
-    title: 'Architectural Trends: Biophilic Luxury & Sustainable Penthouses',
-    excerpt: 'How leading Australian architects are blending native greenery, cross-ventilation, and subterranean wellness spaces in ultra-luxury builds.',
-    content: 'Biophilic design has evolved from a niche preference into an essential element of modern luxury architecture. Multi-million dollar penthouses and waterfront villas are incorporating living green walls, natural timber acoustics, thermal massing, and private rainwater reclamation systems.',
-    category: 'Architecture & Design',
-    author: 'Architectural Digest Syndicate',
-    image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&q=80&w=1200',
-    readTime: '7 min read',
-    createdAt: '2026-08-03T14:45:00.000Z',
-  },
-  {
-    _id: 're-5',
-    title: 'Navigating Property Tax Changes & Foreign Buyer Regulations',
-    excerpt: 'Essential updates on stamp duty concessions, land tax thresholds, and compliance for domestic and overseas investors.',
-    content: 'Navigating real estate taxation requires staying updated with federal and state regulatory amendments. Recent changes to land tax brackets and foreign investment review board guidelines impact high-value acquisitions. Consulting with experienced property conveyancers and wealth advisors ensures structured asset protection.',
-    category: 'Legal & Tax',
-    author: 'Aura Advisory Legal Counsel',
-    image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=1200',
-    readTime: '5 min read',
-    createdAt: '2026-08-04T08:00:00.000Z',
-  },
-  {
-    _id: 're-6',
-    title: 'Suburb Spotlight: Point Piper & Barangaroo Market Dynamics',
-    excerpt: 'Why Sydney Harbour precincts are setting record-breaking median price benchmarks in 2026.',
-    content: 'Harbourside precincts like Point Piper and Barangaroo continue to break national price records. Driven by limited supply, private deep-water berths, and unhindered Opera House views, buyer demand remains exceptionally competitive. Exclusive off-market transactions account for over 40% of luxury transactions.',
-    category: 'Luxury Suburbs',
-    author: 'Prestige Realty Analysts',
-    image: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=1200',
-    readTime: '4 min read',
-    createdAt: '2026-08-04T09:30:00.000Z',
-  },
-];
-
-const REAL_ESTATE_KEYWORDS = [
-  'estate', 'property', 'properties', 'housing', 'house', 'home',
-  'villa', 'apartment', 'penthouse', 'suburb', 'mortgage', 'realty',
-  'realtor', 'rent', 'rental', 'lease', 'architecture', 'land',
-  'auction', 'valuation', 'building', 'commercial', 'residential',
-  'buyer', 'seller', 'investment', 'homeowner', 'broker'
-];
-
 export default function BlogsScreen() {
   const router = useRouter();
-  const [blogs, setBlogs] = useState<Article[]>(CURATED_REAL_ESTATE_ARTICLES);
-  const [filteredBlogs, setFilteredBlogs] = useState<Article[]>(CURATED_REAL_ESTATE_ARTICLES);
+  const [blogs, setBlogs] = useState<Article[]>([]);
+  const [filteredBlogs, setFilteredBlogs] = useState<Article[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activeBlog, setActiveBlog] = useState<Article | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadBlogs = async () => {
@@ -133,32 +55,19 @@ export default function BlogsScreen() {
       try {
         const res = await fetchAdminBlogs();
         if (res.data?.success && res.data.blogs?.length > 0) {
-          const dbBlogs = res.data.blogs
-            .filter((item: any) => {
-              const text = `${item.title || ''} ${item.excerpt || ''} ${item.content || ''} ${item.category || ''}`.toLowerCase();
-              return REAL_ESTATE_KEYWORDS.some(kw => text.includes(kw));
-            })
-            .map((b: any) => ({
-              ...b,
-              category: b.category || 'Market Insights',
-              readTime: b.readTime || '5 min read',
-              author: b.author || 'Aura Editorial',
-              image: b.image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=1200',
-            }));
+          const dbBlogs = res.data.blogs.map((b: any) => ({
+            ...b,
+            category: b.category || 'Market Insights',
+            readTime: b.readTime || '5 min read',
+            author: b.author || 'Aura Editorial',
+            image: b.image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=1200',
+          }));
 
-          const allBlogsMap = new Map();
-          [...dbBlogs, ...CURATED_REAL_ESTATE_ARTICLES].forEach(b => {
-            allBlogsMap.set(b.title, b);
-          });
-
-          const merged = Array.from(allBlogsMap.values()).sort(
-            (a, b) => new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime()
-          );
-
-          setBlogs(merged);
+          setBlogs(dbBlogs);
+          setFilteredBlogs(dbBlogs);
         }
       } catch (err) {
-        console.warn('Failed to fetch admin blogs, using curated list.', err);
+        console.warn('Failed to fetch admin blogs from server:', err);
       } finally {
         setLoading(false);
       }

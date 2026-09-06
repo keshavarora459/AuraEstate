@@ -2,26 +2,42 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 
 export const getBaseUrl = (): string => {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl) {
-    return envUrl.endsWith('/api') ? envUrl : `${envUrl.replace(/\/$/, '')}/api`;
+  // 1. Android Emulator (via ADB reverse port forwarding):
+  // When running on emulator, always use 127.0.0.1:5001 directly for blazing fast, 100% reliable local traffic
+  if (Platform.OS === 'android' && !Device.isDevice) {
+    return 'http://127.0.0.1:5001/api';
   }
 
-  // Automatic IP detection when running in Expo development
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim()) {
+    const trimmed = envUrl.trim();
+    const isLocalhost = trimmed.includes('127.0.0.1') || trimmed.includes('localhost');
+    // On a real physical device, 127.0.0.1 connects to the phone itself, not the PC
+    if (isLocalhost && Device.isDevice) {
+      const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
+      if (hostUri) {
+        const ip = hostUri.split(':')[0];
+        if (ip && !ip.includes('exp.direct')) {
+          return `http://${ip}:5001/api`;
+        }
+      }
+      return 'http://192.168.1.4:5001/api';
+    }
+    return trimmed.endsWith('/api') ? trimmed : `${trimmed.replace(/\/$/, '')}/api`;
+  }
+
   if (__DEV__) {
     const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
     if (hostUri) {
       const ip = hostUri.split(':')[0];
-      if (ip) {
+      if (ip && !ip.includes('exp.direct')) {
         return `http://${ip}:5001/api`;
       }
     }
-    if (Platform.OS === 'android') {
-      return 'http://10.0.2.2:5001/api';
-    }
-    return 'http://localhost:5001/api';
+    return 'http://192.168.1.4:5001/api';
   }
 
   // Default to live backend server
@@ -29,23 +45,36 @@ export const getBaseUrl = (): string => {
 };
 
 export const getSocketUrl = (): string => {
+  if (Platform.OS === 'android' && !Device.isDevice) {
+    return 'http://127.0.0.1:5001';
+  }
+
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl) {
-    return envUrl.replace(/\/api\/?$/, '');
+  if (envUrl && envUrl.trim()) {
+    const trimmed = envUrl.trim().replace(/\/api\/?$/, '');
+    const isLocalhost = trimmed.includes('127.0.0.1') || trimmed.includes('localhost');
+    if (isLocalhost && Device.isDevice) {
+      const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
+      if (hostUri) {
+        const ip = hostUri.split(':')[0];
+        if (ip && !ip.includes('exp.direct')) {
+          return `http://${ip}:5001`;
+        }
+      }
+      return 'http://192.168.1.4:5001';
+    }
+    return trimmed;
   }
 
   if (__DEV__) {
     const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
     if (hostUri) {
       const ip = hostUri.split(':')[0];
-      if (ip) {
+      if (ip && !ip.includes('exp.direct')) {
         return `http://${ip}:5001`;
       }
     }
-    if (Platform.OS === 'android') {
-      return 'http://10.0.2.2:5001';
-    }
-    return 'http://localhost:5001';
+    return 'http://192.168.1.4:5001';
   }
 
   return 'https://auraestate.onrender.com';
@@ -55,6 +84,7 @@ const api = axios.create({
   baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
+    'Bypass-Tunnel-Reminder': 'true',
   },
   timeout: 30000,
 });
@@ -71,15 +101,19 @@ api.interceptors.request.use(async (config) => {
     config.headers.Authorization = `Bearer demo_token_507f1f77bcf86cd799439003`;
   }
 
+  config.headers['Bypass-Tunnel-Reminder'] = 'true';
+
   const currentBase = getBaseUrl();
   if (currentBase && currentBase !== '/api') {
     config.baseURL = currentBase;
   }
+  console.log(`[API REQUEST] ${config.method?.toUpperCase()} -> ${config.baseURL}${config.url}`);
   return config;
 }, (error) => Promise.reject(error));
 
 // Interceptor to fix image URLs from backend
 api.interceptors.response.use((response) => {
+  console.log(`[API RESPONSE ${response.status}] ${response.config.url}`);
   if (response.data) {
     let dataStr = JSON.stringify(response.data);
     if (dataStr.includes('source.unsplash.com')) {
@@ -89,7 +123,10 @@ api.interceptors.response.use((response) => {
     }
   }
   return response;
-}, (error) => Promise.reject(error));
+}, (error) => {
+  console.error(`[API ERROR] ${error.message} (code: ${error.code}) URL: ${error.config?.baseURL}${error.config?.url}`);
+  return Promise.reject(error);
+});
 
 // ==========================================
 // Auth API
@@ -107,6 +144,7 @@ export const toggleWishlist = (propertyId: string) => api.post(`/auth/wishlist/$
 // Properties API
 // ==========================================
 export const fetchProperties = (params?: any) => api.get('/properties', { params });
+export const fetchSoldProperties = (params?: any) => api.get('/properties/sold', { params });
 export const fetchPropertyById = (id: string) => api.get(`/properties/${id}`);
 export const fetchSimilarProperties = (id: string) => api.get(`/properties/${id}/similar`);
 export const createProperty = (data: any) => api.post('/properties', data);
@@ -114,6 +152,12 @@ export const updateProperty = (id: string, data: any) => api.put(`/properties/${
 export const deleteProperty = (id: string) => api.delete(`/properties/${id}`);
 export const updatePropertyStatus = (id: string, status: string) => api.patch(`/properties/${id}/status`, { status });
 export const generatePropertyAppraisal = (id: string) => api.post(`/properties/${id}/appraisal`);
+
+// ==========================================
+// Suburbs API
+// ==========================================
+export const fetchSuburbs = () => api.get('/suburbs');
+export const fetchSuburbByName = (name: string) => api.get(`/suburbs/${encodeURIComponent(name)}`);
 
 // ==========================================
 // Agencies API

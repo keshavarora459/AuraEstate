@@ -8,12 +8,14 @@ const {
   deleteProperty,
   updatePropertyStatus,
   getSimilarProperties,
-  generateAppraisal
+  generateAppraisal,
+  getSoldProperties
 } = require('../controllers/propertyController');
 const { protect } = require('../middlewares/auth');
 const { authorize } = require('../middlewares/rbac');
 
 router.get('/', getProperties);
+router.get('/sold', getSoldProperties);
 router.get('/:id', getPropertyById);
 router.get('/:id/similar', getSimilarProperties);
 router.post('/:id/appraisal', generateAppraisal);

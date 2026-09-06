@@ -61,7 +61,7 @@ const createAgency = async (req, res, next) => {
 const getAgents = async (req, res, next) => {
   try {
     const agents = await User.find({ role: 'agent', isActive: true })
-      .select('name email phone avatar bio licenseNumber role agencyId')
+      .select('name email phone avatar bio licenseNumber role agencyId specialties rating dealsCount location')
       .populate('agencyId', 'name');
     res.json({ success: true, count: agents.length, agents });
   } catch (error) {

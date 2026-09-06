@@ -16,22 +16,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { fetchAgencyById, registerUser } from '@/services/api';
+import { fetchAgencyById, registerUser, fetchAgents } from '@/services/api';
 import { COLORS } from '@/constants/colors';
-
-const FALLBACK_AGENTS = [
-  { _id: '507f1f77bcf86cd799439002', name: 'Ishika Bhatia', email: 'ishikabhatia51@gmail.com', phone: '+61 412 345 678', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=400', listingsCount: 14 },
-  { _id: '507f1f77bcf86cd799439005', name: 'Upansh Sharma', email: 'upansh769@gmail.com', phone: '+61 423 456 789', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=400', listingsCount: 19 },
-  { _id: '507f1f77bcf86cd799439006', name: 'Reet Kaur', email: 'reet67711@gmail.com', phone: '+61 434 567 890', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400', listingsCount: 8 },
-  { _id: '507f1f77bcf86cd799439007', name: 'Ruhi Bhatia', email: 'ruhibhatia0022@gmail.com', phone: '+61 445 678 901', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400', listingsCount: 12 },
-];
 
 export default function AgencyDashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
   const [agencyData, setAgencyData] = useState<any>(null);
-  const [agents, setAgents] = useState<any[]>(FALLBACK_AGENTS);
+  const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -50,6 +43,11 @@ export default function AgencyDashboardScreen() {
           if (res.data.agents && res.data.agents.length > 0) {
             setAgents(res.data.agents);
           }
+        }
+      } else {
+        const res = await fetchAgents();
+        if (res.data?.success && res.data.agents) {
+          setAgents(res.data.agents);
         }
       }
     } catch (err) {

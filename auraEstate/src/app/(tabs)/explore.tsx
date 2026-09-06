@@ -82,7 +82,7 @@ export default function ExploreScreen() {
         setTotalCount(res.data.total || results.length);
       }
     } catch (e) {
-      console.error('Failed to fetch properties', e);
+      console.warn('Failed to fetch properties (backend may be offline):', e);
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -73,6 +73,19 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    specialties: [
+      {
+        type: String
+      }
+    ],
+    rating: {
+      type: Number,
+      default: 4.8
+    },
+    dealsCount: {
+      type: Number,
+      default: 20
+    },
     agencyVerificationStatus: {
       type: String,
       enum: ['none', 'pending', 'approved', 'rejected'],

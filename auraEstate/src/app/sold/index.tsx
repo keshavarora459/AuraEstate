@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,106 +7,60 @@ import {
   TextInput,
   Pressable,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../../constants/colors';
-
-const MOCK_SOLD = [
-  {
-    id: 's1',
-    title: 'Grand Harbourfront Villa',
-    address: '14 Wolseley Road, Point Piper NSW 2027',
-    soldPrice: 22400000,
-    soldDate: '2026-07-12',
-    bedrooms: 6,
-    bathrooms: 7,
-    parking: 6,
-    suburb: 'Point Piper',
-    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800',
-  },
-  {
-    id: 's2',
-    title: 'Bondi Beachfront Penthouse',
-    address: '120 Campbell Parade, Bondi Beach NSW 2026',
-    soldPrice: 4850000,
-    soldDate: '2026-07-28',
-    bedrooms: 3,
-    bathrooms: 2,
-    parking: 2,
-    suburb: 'Bondi Beach',
-    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=800',
-  },
-  {
-    id: 's3',
-    title: 'Toorak European Villa',
-    address: '12 St Georges Road, Toorak VIC 3142',
-    soldPrice: 16500000,
-    soldDate: '2026-06-30',
-    bedrooms: 5,
-    bathrooms: 6,
-    parking: 5,
-    suburb: 'Toorak',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800',
-  },
-  {
-    id: 's4',
-    title: 'Brighton Esplanade Beachside',
-    address: '64 Esplanade, Brighton VIC 3186',
-    soldPrice: 9400000,
-    soldDate: '2026-07-05',
-    bedrooms: 5,
-    bathrooms: 4,
-    parking: 4,
-    suburb: 'Brighton',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800',
-  },
-  {
-    id: 's5',
-    title: 'Mosman Heritage Residence',
-    address: '72 Raglan Street, Mosman NSW 2088',
-    soldPrice: 6900000,
-    soldDate: '2026-08-01',
-    bedrooms: 4,
-    bathrooms: 3,
-    parking: 2,
-    suburb: 'Mosman',
-    image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=80&w=800',
-  },
-  {
-    id: 's6',
-    title: 'Noosa Heads Eco Estate',
-    address: '22 Alderly Terrace, Noosa Heads QLD 4567',
-    soldPrice: 8900000,
-    soldDate: '2026-07-19',
-    bedrooms: 4,
-    bathrooms: 4,
-    parking: 3,
-    suburb: 'Noosa Heads',
-    image: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&q=80&w=800',
-  },
-];
+import { fetchSoldProperties } from '../../services/api';
 
 export default function SoldScreen() {
   const router = useRouter();
   const [search, setSearch] = useState<string>('');
   const [sort, setSort] = useState<'date' | 'price_desc' | 'price_asc'>('date');
+  const [soldItems, setSoldItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  const filtered = MOCK_SOLD.filter((item) => {
+  const loadSoldProperties = async () => {
+    try {
+      const res = await fetchSoldProperties();
+      if (res.data?.success) {
+        setSoldItems(res.data.properties || []);
+      }
+    } catch (err) {
+      console.warn('Failed to load sold properties from server:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSoldProperties();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadSoldProperties();
+  };
+
+  const filtered = soldItems.filter((item) => {
     return (
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      item.suburb.toLowerCase().includes(search.toLowerCase()) ||
-      item.address.toLowerCase().includes(search.toLowerCase())
+      (item.title || '').toLowerCase().includes(search.toLowerCase()) ||
+      (item.suburb || '').toLowerCase().includes(search.toLowerCase()) ||
+      (item.address || '').toLowerCase().includes(search.toLowerCase())
     );
   }).sort((a, b) => {
-    if (sort === 'date') return new Date(b.soldDate).getTime() - new Date(a.soldDate).getTime();
-    if (sort === 'price_desc') return b.soldPrice - a.soldPrice;
-    if (sort === 'price_asc') return a.soldPrice - b.soldPrice;
+    if (sort === 'date') return new Date(b.soldDate || 0).getTime() - new Date(a.soldDate || 0).getTime();
+    if (sort === 'price_desc') return (b.soldPrice || 0) - (a.soldPrice || 0);
+    if (sort === 'price_asc') return (a.soldPrice || 0) - (b.soldPrice || 0);
     return 0;
   });
 
-  const totalValue = filtered.reduce((acc, curr) => acc + curr.soldPrice, 0);
+  const totalValue = filtered.reduce((acc, curr) => acc + (curr.soldPrice || 0), 0);
 
   return (
     <SafeAreaView style={styles.safeContainer}>
@@ -173,7 +127,7 @@ export default function SoldScreen() {
       {/* Sold List */}
       <FlatList
         data={filtered}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id || item._id}
         renderItem={({ item }) => (
           <View style={styles.soldCard}>
             <Image source={{ uri: item.image }} style={styles.cardImage} />
@@ -181,7 +135,7 @@ export default function SoldScreen() {
               <Text style={styles.soldBadgeText}>SOLD</Text>
             </View>
             <View style={styles.cardBody}>
-              <Text style={styles.cardPrice}>${(item.soldPrice / 1000000).toFixed(2)}M</Text>
+              <Text style={styles.cardPrice}>${((item.soldPrice || 0) / 1000000).toFixed(2)}M</Text>
               <Text style={styles.cardTitle} numberOfLines={1}>
                 {item.title}
               </Text>
@@ -198,6 +152,21 @@ export default function SoldScreen() {
             </View>
           </View>
         )}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[AuraColors.primary]} />
+        }
+        ListEmptyComponent={
+          loading ? (
+            <ActivityIndicator size="large" color={AuraColors.primary} style={{ marginTop: 40 }} />
+          ) : (
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <Ionicons name="documents-outline" size={40} color={AuraColors.textMuted} />
+              <Text style={{ marginTop: 8, color: AuraColors.textMuted, fontWeight: '600' }}>
+                No sold records found matching your search.
+              </Text>
+            </View>
+          )
+        }
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />

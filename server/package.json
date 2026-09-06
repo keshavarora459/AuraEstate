@@ -7,9 +7,11 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "tunnel": "npx localtunnel --port 5001",
     "build": "echo 'Server build complete'",
     "seed": "node src/utils/seeder.js",
-    "seed:large": "node src/utils/seedLargeProperties.js"
+    "seed:large": "node src/utils/seedLargeProperties.js",
+    "seed:migrated": "node src/utils/seedMigratedData.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

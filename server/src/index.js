@@ -22,6 +22,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const suburbRoutes = require('./routes/suburbRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -205,6 +206,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/suburbs', suburbRoutes);
 
 // Socket.io Real-time Chat & Alert Handler
 io.on('connection', (socket) => {

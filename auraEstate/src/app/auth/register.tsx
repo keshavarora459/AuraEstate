@@ -71,10 +71,11 @@ export default function RegisterScreen() {
         }
       }
     } catch (err: any) {
+      console.error('Registration error detail:', err);
+      const targetUrl = `${err.config?.baseURL || ''}${err.config?.url || ''}`;
       const msg =
         err.response?.data?.message ||
-        err.message ||
-        'Registration failed. Please try again.';
+        `${err.message || 'Error'} [${err.code || 'UNKNOWN'}] -> ${targetUrl || 'unknown URL'}`;
       setError(msg);
     } finally {
       setLoading(false);
@@ -116,8 +117,20 @@ export default function RegisterScreen() {
           {/* Error Banner */}
           {error ? (
             <View style={styles.errorBox}>
-              <Ionicons name="alert-circle-outline" size={16} color={COLORS.error} />
-              <Text style={styles.errorText}>{error}</Text>
+              <Ionicons name="alert-circle-outline" size={18} color={COLORS.error} style={{ marginTop: 2 }} />
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.errorText}>{error}</Text>
+                {error.toLowerCase().includes('already exists') && (
+                  <TouchableOpacity
+                    onPress={() => router.push({ pathname: '/auth/login', params: { email: email.trim() } } as any)}
+                    style={{ marginTop: 6 }}
+                  >
+                    <Text style={{ color: COLORS.primary, fontWeight: '700', fontSize: 13 }}>
+                      Tap here to Sign In with this email →
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           ) : null}
 
@@ -334,7 +347,7 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',

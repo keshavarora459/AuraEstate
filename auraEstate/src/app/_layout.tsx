@@ -1,10 +1,13 @@
 import React from 'react';
+import { LogBox } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../context/AuthContext';
 import { SocketProvider } from '../context/SocketContext';
 import { AuthPromptModal } from '../components/AuthPromptModal';
+
+LogBox.ignoreAllLogs(true);
 
 export default function RootLayout() {
   return (

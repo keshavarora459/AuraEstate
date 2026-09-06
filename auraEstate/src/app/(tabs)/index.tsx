@@ -14,23 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../../constants/colors';
-import { fetchProperties, fetchAgencies, fetchAdminBlogs } from '../../services/api';
+import {
+  fetchProperties,
+  fetchAgencies,
+  fetchAdminBlogs,
+  fetchSuburbs,
+  fetchSoldProperties
+} from '../../services/api';
 import PropertyCard from '../../components/PropertyCard';
-
-const TOP_SUBURBS = [
-  { name: 'Point Piper', state: 'NSW', median: '$18.5M', img: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=400' },
-  { name: 'Toorak', state: 'VIC', median: '$5.9M', img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=400' },
-  { name: 'Bondi Beach', state: 'NSW', median: '$4.8M', img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=400' },
-  { name: 'Mosman', state: 'NSW', median: '$5.2M', img: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=400' },
-  { name: 'Noosa Heads', state: 'QLD', median: '$3.2M', img: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&q=80&w=400' },
-  { name: 'South Yarra', state: 'VIC', median: '$3.4M', img: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&q=80&w=400' },
-];
-
-const RECENT_SOLD_ITEMS = [
-  { title: 'Grand Harbourfront Villa', suburb: 'Point Piper NSW', price: '$22.4M', date: '12 Jul 2026', beds: 6, baths: 7, img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=600' },
-  { title: 'Toorak European Villa', suburb: 'Toorak VIC', price: '$16.5M', date: '30 Jun 2026', beds: 5, baths: 6, img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=600' },
-  { title: 'Vaucluse Cliffside Mansion', suburb: 'Vaucluse NSW', price: '$19.8M', date: '15 Jun 2026', beds: 5, baths: 6, img: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&q=80&w=600' },
-];
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -40,41 +31,28 @@ export default function HomeScreen() {
   const [featuredProperties, setFeaturedProperties] = useState<any[]>([]);
   const [agencies, setAgencies] = useState<any[]>([]);
   const [blogs, setBlogs] = useState<any[]>([]);
+  const [suburbs, setSuburbs] = useState<any[]>([]);
+  const [soldItems, setSoldItems] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   const loadData = async () => {
     try {
-      const [propRes, agencyRes, blogRes] = await Promise.all([
-        fetchProperties({ limit: 6 }).catch(() => ({ data: { success: false } })),
-        fetchAgencies().catch(() => ({ data: { success: false } })),
-        fetchAdminBlogs().catch(() => ({ data: { success: false } })),
+      const [propRes, agencyRes, blogRes, suburbRes, soldRes] = await Promise.all([
+        fetchProperties({ limit: 6 }).catch(() => null),
+        fetchAgencies().catch(() => null),
+        fetchAdminBlogs().catch(() => null),
+        fetchSuburbs().catch(() => null),
+        fetchSoldProperties({ limit: 4 }).catch(() => null),
       ]);
 
-      if (propRes.data?.success) setFeaturedProperties(propRes.data.properties || []);
-      if (agencyRes.data?.success) setAgencies(agencyRes.data.agencies || []);
-      if (blogRes.data?.success && blogRes.data.blogs?.length > 0) {
-        setBlogs(blogRes.data.blogs);
-      } else {
-        setBlogs([
-          {
-            _id: 'fb-1',
-            title: 'Australian Property Market Outlook 2026: Trends & Growth Suburbs',
-            excerpt: 'Interest rates and demographic shifts shaping 2026 luxury real estate.',
-            category: 'Market Insights',
-            image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=800',
-          },
-          {
-            _id: 'fb-2',
-            title: 'Top 5 Renovation Projects That Boost Property Valuation',
-            excerpt: 'High-end home upgrades yielding top ROI at prestige auction.',
-            category: 'Sellers Guide',
-            image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800',
-          },
-        ]);
-      }
+      if (propRes?.data?.success) setFeaturedProperties(propRes.data.properties || []);
+      if (agencyRes?.data?.success) setAgencies(agencyRes.data.agencies || []);
+      if (blogRes?.data?.success && blogRes.data.blogs) setBlogs(blogRes.data.blogs);
+      if (suburbRes?.data?.success && suburbRes.data.suburbs) setSuburbs(suburbRes.data.suburbs);
+      if (soldRes?.data?.success && soldRes.data.properties) setSoldItems(soldRes.data.properties);
     } catch (e) {
-      console.error('Home load error', e);
+      console.warn('Home load error (backend may be offline):', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -186,17 +164,17 @@ export default function HomeScreen() {
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suburbsScroll}>
-          {TOP_SUBURBS.map((suburb) => (
+          {suburbs.filter((s) => s.name !== 'default').map((suburb) => (
             <Pressable
-              key={suburb.name}
+              key={suburb._id || suburb.name}
               style={styles.suburbCard}
               onPress={() => router.push(`/suburbs/${encodeURIComponent(suburb.name)}` as any)}
             >
-              <Image source={{ uri: suburb.img }} style={styles.suburbImage} />
+              <Image source={{ uri: suburb.image || suburb.img }} style={styles.suburbImage} />
               <View style={styles.suburbOverlay} />
               <View style={styles.suburbTextWrap}>
                 <Text style={styles.suburbName}>{suburb.name}</Text>
-                <Text style={styles.suburbMedian}>{suburb.median} median</Text>
+                <Text style={styles.suburbMedian}>{suburb.medianPrice || suburb.median || 'Prestige'} median</Text>
               </View>
             </Pressable>
           ))}
@@ -269,9 +247,9 @@ export default function HomeScreen() {
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.soldScroll}>
-          {RECENT_SOLD_ITEMS.map((item, idx) => (
-            <Pressable key={idx} style={styles.soldCard} onPress={() => router.push('/sold' as any)}>
-              <Image source={{ uri: item.img }} style={styles.soldImage} />
+          {soldItems.map((item, idx) => (
+            <Pressable key={item._id || item.id || idx} style={styles.soldCard} onPress={() => router.push('/sold' as any)}>
+              <Image source={{ uri: item.image || item.img }} style={styles.soldImage} />
               <View style={styles.soldBadge}>
                 <Text style={styles.soldBadgeText}>SOLD</Text>
               </View>
@@ -279,10 +257,12 @@ export default function HomeScreen() {
                 <Text style={styles.soldTitle} numberOfLines={1}>
                   {item.title}
                 </Text>
-                <Text style={styles.soldLocation}>{item.suburb}</Text>
+                <Text style={styles.soldLocation}>{item.suburb || item.address}</Text>
                 <View style={styles.soldPriceRow}>
-                  <Text style={styles.soldPrice}>{item.price}</Text>
-                  <Text style={styles.soldDate}>{item.date}</Text>
+                  <Text style={styles.soldPrice}>
+                    {item.soldPrice ? `$${(item.soldPrice / 1000000).toFixed(1)}M` : (item.price ? `$${(item.price / 1000000).toFixed(1)}M` : '$12.5M')}
+                  </Text>
+                  <Text style={styles.soldDate}>{item.soldDate || item.date || 'Recent'}</Text>
                 </View>
               </View>
             </Pressable>

@@ -441,6 +441,54 @@ const generateAppraisal = async (req, res, next) => {
   }
 };
 
+// @desc    Get sold properties
+// @route   GET /api/properties/sold
+const getSoldProperties = async (req, res, next) => {
+  try {
+    const { suburb, search, limit = 20 } = req.query;
+    const query = { status: 'Sold' };
+
+    if (suburb) {
+      query['address.suburb'] = { $regex: suburb, $options: 'i' };
+    }
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { 'address.street': { $regex: search, $options: 'i' } },
+        { 'address.suburb': { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const soldProperties = await Property.find(query)
+      .sort({ updatedAt: -1 })
+      .limit(Number(limit))
+      .lean();
+
+    const properties = soldProperties.map((p) => ({
+      id: p._id.toString(),
+      _id: p._id.toString(),
+      title: p.title,
+      address: `${p.address?.street || ''}, ${p.address?.suburb || ''} ${p.address?.state || ''} ${p.address?.postcode || ''}`.trim(),
+      soldPrice: p.price,
+      soldDate: p.updatedAt ? new Date(p.updatedAt).toISOString().split('T')[0] : '2026-07-12',
+      bedrooms: p.bedrooms,
+      bathrooms: p.bathrooms,
+      parking: p.parkingSpaces,
+      suburb: p.address?.suburb || '',
+      image: p.images && p.images.length > 0 ? p.images[0] : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'
+    }));
+
+    res.json({
+      success: true,
+      count: properties.length,
+      properties
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getProperties,
   getPropertyById,
@@ -449,5 +497,7 @@ module.exports = {
   deleteProperty,
   updatePropertyStatus,
   getSimilarProperties,
-  generateAppraisal
+  generateAppraisal,
+  getSoldProperties
 };
+

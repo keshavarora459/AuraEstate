@@ -248,6 +248,10 @@ const seedDB = async () => {
     await Blog.insertMany(sampleBlogs);
     console.log(`\n📰 Seeded ${sampleBlogs.length} Blog articles.`);
 
+    // Seed Suburbs and Migrated Records
+    const seedMigratedData = require('./seedMigratedData');
+    await seedMigratedData();
+
     // Seed Activity Logs
     await ActivityLog.create({
       userId: adminUser._id,

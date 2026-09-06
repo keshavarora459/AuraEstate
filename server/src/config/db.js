@@ -13,7 +13,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 const connectDB = async () => {
   try {
-    let mongoUri = process.env.MONGO_URI || 'mongodb+srv://keshavarora459_db_user:oItrcf8uVtfmwIua@cluster0.c8f8m4p.mongodb.net/test?appName=Cluster0';
+    let mongoUri = process.env.MONGO_URI || 'mongodb+srv://keshavarora459_db_user:uPze3mYuAEGSqjpJ@cluster0.c8f8m4p.mongodb.net/test?appName=Cluster0';
     
     await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000,
@@ -40,8 +40,11 @@ const connectDB = async () => {
   } catch (error) {
     console.error('❌ MongoDB Connection Failed:', error.message);
     mongoose.set('bufferCommands', false);
-    // Exit process with failure since this is the primary database
-    process.exit(1);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    } else {
+      console.warn('⚠️  Server will stay running in development so you can fix your MONGO_URI in server/.env without nodemon crash loops.');
+    }
   }
 };
 
