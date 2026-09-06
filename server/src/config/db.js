@@ -11,12 +11,21 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 
+let isConnecting = false;
+
 const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+  if (isConnecting) {
+    return;
+  }
+  isConnecting = true;
   try {
     let mongoUri = process.env.MONGO_URI || 'mongodb+srv://keshavarora459_db_user:uPze3mYuAEGSqjpJ@cluster0.c8f8m4p.mongodb.net/test?appName=Cluster0';
     
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 8000,
     });
     console.log(`✅ MongoDB Connected: ${mongoose.connection.host}`);
     console.log(`📦 Database: ${mongoose.connection.name}`);
@@ -40,11 +49,13 @@ const connectDB = async () => {
   } catch (error) {
     console.error('❌ MongoDB Connection Failed:', error.message);
     mongoose.set('bufferCommands', false);
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
       process.exit(1);
     } else {
-      console.warn('⚠️  Server will stay running in development so you can fix your MONGO_URI in server/.env without nodemon crash loops.');
+      console.warn('⚠️  Server staying active so connection can be retried.');
     }
+  } finally {
+    isConnecting = false;
   }
 };
 
