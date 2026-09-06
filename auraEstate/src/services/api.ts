@@ -5,79 +5,21 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 
 export const getBaseUrl = (): string => {
-  // 1. Android Emulator (via ADB reverse port forwarding):
-  // When running on emulator, always use 127.0.0.1:5001 directly for blazing fast, 100% reliable local traffic
-  if (Platform.OS === 'android' && !Device.isDevice) {
-    return 'http://127.0.0.1:5001/api';
-  }
-
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl && envUrl.trim()) {
-    const trimmed = envUrl.trim();
-    const isLocalhost = trimmed.includes('127.0.0.1') || trimmed.includes('localhost');
-    // On a real physical device, 127.0.0.1 connects to the phone itself, not the PC
-    if (isLocalhost && Device.isDevice) {
-      const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
-      if (hostUri) {
-        const ip = hostUri.split(':')[0];
-        if (ip && !ip.includes('exp.direct')) {
-          return `http://${ip}:5001/api`;
-        }
-      }
-      return 'http://192.168.1.4:5001/api';
-    }
+  const envUrl = process.env.EXPO_PUBLIC_API_URL || '';
+  const trimmed = envUrl.trim();
+  if (trimmed) {
     return trimmed.endsWith('/api') ? trimmed : `${trimmed.replace(/\/$/, '')}/api`;
   }
-
-  if (__DEV__) {
-    const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
-    if (hostUri) {
-      const ip = hostUri.split(':')[0];
-      if (ip && !ip.includes('exp.direct')) {
-        return `http://${ip}:5001/api`;
-      }
-    }
-    return 'http://192.168.1.4:5001/api';
-  }
-
-  // Default to live backend server
-  return 'https://auraestate.onrender.com/api';
+  return '';
 };
 
 export const getSocketUrl = (): string => {
-  if (Platform.OS === 'android' && !Device.isDevice) {
-    return 'http://127.0.0.1:5001';
+  const envUrl = process.env.EXPO_PUBLIC_API_URL || '';
+  const trimmed = envUrl.trim();
+  if (trimmed) {
+    return trimmed.replace(/\/api\/?$/, '').replace(/\/$/, '');
   }
-
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl && envUrl.trim()) {
-    const trimmed = envUrl.trim().replace(/\/api\/?$/, '');
-    const isLocalhost = trimmed.includes('127.0.0.1') || trimmed.includes('localhost');
-    if (isLocalhost && Device.isDevice) {
-      const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
-      if (hostUri) {
-        const ip = hostUri.split(':')[0];
-        if (ip && !ip.includes('exp.direct')) {
-          return `http://${ip}:5001`;
-        }
-      }
-      return 'http://192.168.1.4:5001';
-    }
-    return trimmed;
-  }
-
-  if (__DEV__) {
-    const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
-    if (hostUri) {
-      const ip = hostUri.split(':')[0];
-      if (ip && !ip.includes('exp.direct')) {
-        return `http://${ip}:5001`;
-      }
-    }
-    return 'http://192.168.1.4:5001';
-  }
-
-  return 'https://auraestate.onrender.com';
+  return '';
 };
 
 const api = axios.create({
@@ -92,19 +34,18 @@ const api = axios.create({
 // Interceptor to attach JWT token and ensure baseURL
 api.interceptors.request.use(async (config) => {
   try {
-    let token = await AsyncStorage.getItem('token');
-    if (!token) {
-      token = 'demo_token_507f1f77bcf86cd799439003';
+    const token = await AsyncStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    config.headers.Authorization = `Bearer ${token}`;
   } catch (e) {
-    config.headers.Authorization = `Bearer demo_token_507f1f77bcf86cd799439003`;
+    // Ignore error reading token
   }
 
   config.headers['Bypass-Tunnel-Reminder'] = 'true';
 
   const currentBase = getBaseUrl();
-  if (currentBase && currentBase !== '/api') {
+  if (currentBase) {
     config.baseURL = currentBase;
   }
   console.log(`[API REQUEST] ${config.method?.toUpperCase()} -> ${config.baseURL}${config.url}`);
