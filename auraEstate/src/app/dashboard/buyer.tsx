@@ -118,7 +118,7 @@ export default function BuyerDashboardScreen() {
             <Ionicons
               name="chatbubbles-outline"
               size={14}
-              color={activeTab === 'messages' ? '#0f172a' : COLORS.textMuted}
+              color={activeTab === 'messages' ? '#ffffff' : COLORS.textMuted}
               style={{ marginRight: 4 }}
             />
             <Text style={[styles.tabText, activeTab === 'messages' && styles.tabTextActive]}>
@@ -248,7 +248,7 @@ export default function BuyerDashboardScreen() {
                           style={styles.payDepositBtn}
                           onPress={() => handleOpenPayment(offer.propertyId?._id, 'Holding Deposit', 5000)}
                         >
-                          <Ionicons name="lock-closed" size={12} color="#0f172a" />
+                          <Ionicons name="lock-closed" size={12} color="#ffffff" />
                           <Text style={styles.payDepositBtnText}>Pay Deposit ($5,000)</Text>
                         </TouchableOpacity>
                       </View>
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   tabTextActive: {
-    color: '#0f172a',
+    color: '#ffffff',
   },
   scrollBody: {
     padding: 16,
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#ffffff',
   },
   itemCard: {
     backgroundColor: COLORS.cardDark,
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
   payDepositBtnText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#0f172a',
+    color: '#ffffff',
   },
   paymentAmountText: {
     fontSize: 15,

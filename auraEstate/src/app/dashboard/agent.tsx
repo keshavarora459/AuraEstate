@@ -130,7 +130,7 @@ export default function AgentDashboardScreen() {
           style={styles.addPropertyBtn}
           onPress={() => setIsAddModalOpen(true)}
         >
-          <Ionicons name="add" size={18} color="#0f172a" />
+          <Ionicons name="add" size={18} color="#ffffff" />
         </TouchableOpacity>
       </View>
 
@@ -277,7 +277,7 @@ export default function AgentDashboardScreen() {
                     style={styles.smallAddBtn}
                     onPress={() => setIsAddModalOpen(true)}
                   >
-                    <Ionicons name="add" size={14} color="#0f172a" />
+                    <Ionicons name="add" size={14} color="#ffffff" />
                     <Text style={styles.smallAddBtnText}>Add</Text>
                   </TouchableOpacity>
                 </View>
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   tabTextActive: {
-    color: '#0f172a',
+    color: '#ffffff',
   },
   scrollBody: {
     padding: 16,
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   bannerBtnText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#0f172a',
+    color: '#ffffff',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   smallAddBtnText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#0f172a',
+    color: '#ffffff',
   },
   statusPill: {
     paddingHorizontal: 8,

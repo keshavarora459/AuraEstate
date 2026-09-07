@@ -107,7 +107,7 @@ export default function ForgotPasswordScreen() {
               <Ionicons
                 name={step === 1 ? 'key-outline' : 'shield-checkmark-outline'}
                 size={28}
-                color="#0f172a"
+                color="#ffffff"
               />
             </View>
             <Text style={styles.title}>

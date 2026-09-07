@@ -118,7 +118,7 @@ export default function AgencyDashboardScreen() {
           style={styles.inviteBtn}
           onPress={() => setShowInviteModal(true)}
         >
-          <Ionicons name="person-add-outline" size={16} color="#0f172a" />
+          <Ionicons name="person-add-outline" size={16} color="#ffffff" />
           <Text style={styles.inviteBtnText}>Invite</Text>
         </TouchableOpacity>
       </View>
@@ -135,7 +135,7 @@ export default function AgencyDashboardScreen() {
             {/* Agency Banner Card */}
             <View style={styles.agencyHeroCard}>
               <View style={styles.agencyIconBadge}>
-                <Ionicons name="business" size={28} color="#0f172a" />
+                <Ionicons name="business" size={28} color="#ffffff" />
               </View>
               <Text style={styles.agencyHeroTitle}>{agencyData?.name || 'Prestige Realty Group'}</Text>
               <Text style={styles.agencyHeroLocation}>
@@ -245,7 +245,7 @@ export default function AgencyDashboardScreen() {
                 disabled={inviting}
               >
                 {inviting ? (
-                  <ActivityIndicator color="#0f172a" />
+                  <ActivityIndicator color="#ffffff" />
                 ) : (
                   <Text style={styles.modalSubmitBtnText}>Create Agent Account</Text>
                 )}
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   inviteBtnText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0f172a',
+    color: '#ffffff',
   },
   scrollBody: {
     padding: 16,
@@ -320,9 +320,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.borderDark,
   },
   agencyIconBadge: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -337,6 +337,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
     marginTop: 4,
+    fontWeight: '600',
   },
   agencyHeroDesc: {
     fontSize: 12,
@@ -372,6 +373,34 @@ const styles = StyleSheet.create({
     width: 1,
     height: 24,
     backgroundColor: COLORS.borderDark,
+  },
+  kpiRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  kpiCard: {
+    flex: 1,
+    backgroundColor: COLORS.cardDark,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.borderDark,
+    alignItems: 'center',
+    gap: 4,
+  },
+  kpiNumber: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  kpiLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+  },
+  section: {
+    gap: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -445,7 +474,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: 'rgba(15,23,42,0.4)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
@@ -504,6 +533,6 @@ const styles = StyleSheet.create({
   modalSubmitBtnText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0f172a',
+    color: '#ffffff',
   },
 });

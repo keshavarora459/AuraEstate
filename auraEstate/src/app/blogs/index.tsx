@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
   },
   modalContainer: {
     flex: 1,
@@ -480,12 +480,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.borderDark,
+    backgroundColor: '#ffffff',
   },
   modalCloseBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.cardDark,
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -539,7 +540,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   modalExcerptBox: {
-    backgroundColor: COLORS.cardDark,
+    backgroundColor: '#f1f5f9',
     borderLeftWidth: 3,
     borderLeftColor: COLORS.primary,
     padding: 14,
@@ -560,7 +561,7 @@ const styles = StyleSheet.create({
   },
   disclaimerBox: {
     flexDirection: 'row',
-    backgroundColor: COLORS.cardDark,
+    backgroundColor: '#f8fafc',
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,

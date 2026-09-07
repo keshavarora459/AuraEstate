@@ -291,7 +291,7 @@ export default function AdminDashboardScreen() {
                           style={styles.approveBtn}
                           onPress={() => handleApprove(prop._id)}
                         >
-                          <Ionicons name="checkmark-circle-outline" size={14} color="#0f172a" />
+                          <Ionicons name="checkmark-circle-outline" size={14} color="#ffffff" />
                           <Text style={styles.approveBtnText}>Approve & Publish</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   tabTextActive: {
-    color: '#0f172a',
+    color: '#ffffff',
   },
   scrollBody: {
     padding: 16,
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   approveBtnText: {
-    color: '#0f172a',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '800',
   },
@@ -730,12 +730,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   roleChipTextActive: {
-    color: '#0f172a',
+    color: '#ffffff',
   },
   inquiryMessage: {
     fontSize: 12,
     color: COLORS.textPrimary,
-    backgroundColor: COLORS.bgDark,
+    backgroundColor: '#f1f5f9',
     padding: 10,
     borderRadius: 8,
     marginTop: 4,

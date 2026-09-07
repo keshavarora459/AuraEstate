@@ -106,7 +106,7 @@ export default function RegisterScreen() {
           {/* Logo & Title */}
           <View style={styles.header}>
             <View style={styles.logoBadge}>
-              <Ionicons name="sparkles" size={26} color="#0f172a" />
+              <Ionicons name="sparkles" size={26} color="#ffffff" />
             </View>
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>

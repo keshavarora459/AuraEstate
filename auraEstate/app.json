@@ -8,7 +8,8 @@
     "scheme": "auraestate",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.auraestate.app"
     },
     "android": {
       "package": "com.auraestate.app",

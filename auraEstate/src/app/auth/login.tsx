@@ -81,7 +81,7 @@ export default function LoginScreen() {
           {/* Logo & Title */}
           <View style={styles.header}>
             <View style={styles.logoBadge}>
-              <Ionicons name="business" size={28} color="#0f172a" />
+              <Ionicons name="business" size={28} color="#ffffff" />
             </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>

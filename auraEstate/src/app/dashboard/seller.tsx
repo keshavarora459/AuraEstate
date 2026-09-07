@@ -142,7 +142,7 @@ export default function SellerDashboardScreen() {
           style={styles.addPropertyBtn}
           onPress={() => setIsAddModalOpen(true)}
         >
-          <Ionicons name="add" size={18} color="#0f172a" />
+          <Ionicons name="add" size={18} color="#ffffff" />
           <Text style={styles.addPropertyBtnText}>Add Property</Text>
         </TouchableOpacity>
       </View>
@@ -208,7 +208,7 @@ export default function SellerDashboardScreen() {
                       style={styles.actionBtn}
                       onPress={() => setIsAddModalOpen(true)}
                     >
-                      <Ionicons name="add" size={16} color="#0f172a" />
+                      <Ionicons name="add" size={16} color="#ffffff" />
                       <Text style={styles.actionBtnText}>Add First Listing</Text>
                     </TouchableOpacity>
                   </View>
@@ -330,7 +330,7 @@ export default function SellerDashboardScreen() {
                             style={styles.acceptBtn}
                             onPress={() => handleOfferAction(offer._id, 'accept')}
                           >
-                            <Ionicons name="checkmark-circle-outline" size={14} color="#0f172a" />
+                            <Ionicons name="checkmark-circle-outline" size={14} color="#ffffff" />
                             <Text style={styles.acceptBtnText}>Accept Offer</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   addPropertyBtnText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0f172a',
+    color: '#ffffff',
   },
   tabsContainer: {
     borderBottomWidth: 1,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   tabTextActive: {
-    color: '#0f172a',
+    color: '#ffffff',
   },
   scrollBody: {
     padding: 16,
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#ffffff',
   },
   itemCard: {
     backgroundColor: COLORS.cardDark,
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   acceptBtnText: {
-    color: '#0f172a',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '800',
   },
