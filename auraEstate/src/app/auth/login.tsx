@@ -165,72 +165,6 @@ export default function LoginScreen() {
                 <Text style={styles.submitBtnText}>Sign In</Text>
               )}
             </TouchableOpacity>
-
-            {/* Quick Demo Fill */}
-            <View style={styles.demoSection}>
-              <Text style={styles.demoSectionTitle}>1-TAP DEMO LOGIN</Text>
-              <View style={styles.demoChipsRow}>
-                <TouchableOpacity
-                  style={[styles.demoChip, email === 'ishikabhatia51@gmail.com' && styles.demoChipActive]}
-                  onPress={() => {
-                    setEmail('ishikabhatia51@gmail.com');
-                    setPassword('password123');
-                    setError('');
-                  }}
-                >
-                  <Ionicons name="briefcase-outline" size={13} color={email === 'ishikabhatia51@gmail.com' ? '#ffffff' : COLORS.primary} />
-                  <Text style={[styles.demoChipText, email === 'ishikabhatia51@gmail.com' && styles.demoChipTextActive]}>Agent</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.demoChip, email === 'buyer@gmail.com' && styles.demoChipActive]}
-                  onPress={() => {
-                    setEmail('buyer@gmail.com');
-                    setPassword('password123');
-                    setError('');
-                  }}
-                >
-                  <Ionicons name="home-outline" size={13} color={email === 'buyer@gmail.com' ? '#ffffff' : COLORS.primary} />
-                  <Text style={[styles.demoChipText, email === 'buyer@gmail.com' && styles.demoChipTextActive]}>Buyer</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.demoChip, email === 'seller@gmail.com' && styles.demoChipActive]}
-                  onPress={() => {
-                    setEmail('seller@gmail.com');
-                    setPassword('password123');
-                    setError('');
-                  }}
-                >
-                  <Ionicons name="key-outline" size={13} color={email === 'seller@gmail.com' ? '#ffffff' : COLORS.primary} />
-                  <Text style={[styles.demoChipText, email === 'seller@gmail.com' && styles.demoChipTextActive]}>Seller</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.demoChip, email === 'agency@prestigerealty.com.au' && styles.demoChipActive]}
-                  onPress={() => {
-                    setEmail('agency@prestigerealty.com.au');
-                    setPassword('password123');
-                    setError('');
-                  }}
-                >
-                  <Ionicons name="business-outline" size={13} color={email === 'agency@prestigerealty.com.au' ? '#ffffff' : COLORS.primary} />
-                  <Text style={[styles.demoChipText, email === 'agency@prestigerealty.com.au' && styles.demoChipTextActive]}>Agency</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.demoChip, email === 'admin@realestate.com' && styles.demoChipActive]}
-                  onPress={() => {
-                    setEmail('admin@realestate.com');
-                    setPassword('password123');
-                    setError('');
-                  }}
-                >
-                  <Ionicons name="shield-checkmark-outline" size={13} color={email === 'admin@realestate.com' ? '#ffffff' : COLORS.primary} />
-                  <Text style={[styles.demoChipText, email === 'admin@realestate.com' && styles.demoChipTextActive]}>Admin</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
 
           {/* Footer */}
@@ -394,48 +328,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.primary,
-  },
-  demoSection: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.borderDark,
-    alignItems: 'center',
-  },
-  demoSectionTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.textMuted,
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  demoChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  demoChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: COLORS.cardDark,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.borderDark,
-  },
-  demoChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  demoChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textMuted,
-  },
-  demoChipTextActive: {
-    color: '#ffffff',
   },
 });
