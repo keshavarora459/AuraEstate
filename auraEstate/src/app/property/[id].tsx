@@ -17,9 +17,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
-import { fetchPropertyById, fetchSimilarProperties, generatePropertyAppraisal } from '../../services/api';
+import { fetchPropertyById, fetchSimilarProperties } from '../../services/api';
 import PropertyCard from '../../components/PropertyCard';
-import AppraisalReportModal from '../../components/AppraisalReportModal';
 import InspectionBookingModal from '../../components/InspectionBookingModal';
 import EnquiryModal from '../../components/EnquiryModal';
 
@@ -62,10 +61,6 @@ export default function PropertyDetailScreen() {
   const [loading, setLoading] = useState<boolean>(!cached);
 
   // Modals state
-  const [appraisalReport, setAppraisalReport] = useState<any | null>(null);
-  const [appraisalModalOpen, setAppraisalModalOpen] = useState<boolean>(false);
-  const [appraisalLoading, setAppraisalLoading] = useState<boolean>(false);
-
   const [bookingModalOpen, setBookingModalOpen] = useState<boolean>(false);
   const [enquiryModalOpen, setEnquiryModalOpen] = useState<boolean>(false);
 
@@ -107,24 +102,6 @@ export default function PropertyDetailScreen() {
 
     loadDetail();
   }, [id]);
-
-  const handleGenerateAppraisal = async () => {
-    if (!id) return;
-    setAppraisalLoading(true);
-    try {
-      const res = await generatePropertyAppraisal(id);
-      if (res.data?.success && res.data.report) {
-        setAppraisalReport(res.data.report);
-        setAppraisalModalOpen(true);
-      } else {
-        Alert.alert('Appraisal Notice', 'Could not generate appraisal report.');
-      }
-    } catch (e: any) {
-      Alert.alert('Appraisal Error', e.response?.data?.message || 'Error generating AI appraisal.');
-    } finally {
-      setAppraisalLoading(false);
-    }
-  };
 
   const handleCallAgent = (phone?: string) => {
     const num = phone || '+61480089451';
@@ -302,33 +279,6 @@ export default function PropertyDetailScreen() {
           </View>
         </View>
 
-        {/* AI Appraisal Action Card */}
-        <View style={styles.appraisalCard}>
-          <View style={styles.appraisalHeader}>
-            <View style={styles.aiBadge}>
-              <Ionicons name="sparkles" size={14} color={AuraColors.primaryDark} />
-              <Text style={styles.aiBadgeText}>AI VALUATION</Text>
-            </View>
-            <Text style={styles.appraisalTitle}>Certified Property Appraisal</Text>
-            <Text style={styles.appraisalSubtitle}>
-              Generate an instant ML-powered valuation report comparing 50+ recent suburb settlements.
-            </Text>
-          </View>
-          <Pressable
-            style={styles.generateAppraisalBtn}
-            onPress={handleGenerateAppraisal}
-            disabled={appraisalLoading}
-          >
-            {appraisalLoading ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <>
-                <Ionicons name="document-text-outline" size={16} color="#ffffff" />
-                <Text style={styles.generateAppraisalBtnText}>View AI Appraisal Report</Text>
-              </>
-            )}
-          </Pressable>
-        </View>
 
         {/* Inspection Schedule */}
         <View style={styles.sectionCard}>
@@ -451,20 +401,6 @@ export default function PropertyDetailScreen() {
           </View>
         </View>
 
-        {/* Suburb Insights Link */}
-        {suburb && suburb !== 'Australia' && (
-          <Pressable
-            style={styles.suburbInsightsBtn}
-            onPress={() => router.push(`/suburbs/${encodeURIComponent(suburb)}` as any)}
-          >
-            <Ionicons name="stats-chart" size={18} color={AuraColors.primaryDark} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.suburbInsightsTitle}>Explore {suburb} Suburb Profile</Text>
-              <Text style={styles.suburbInsightsSub}>Median prices, annual growth rates, and demographics</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={AuraColors.primaryDark} />
-          </Pressable>
-        )}
 
         {/* Similar Properties */}
         {similarProperties.length > 0 && (
@@ -480,11 +416,6 @@ export default function PropertyDetailScreen() {
       </ScrollView>
 
       {/* Modals */}
-      <AppraisalReportModal
-        visible={appraisalModalOpen}
-        onClose={() => setAppraisalModalOpen(false)}
-        reportData={appraisalReport}
-      />
       <InspectionBookingModal
         visible={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
@@ -679,54 +610,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
     textAlign: 'center',
   },
-  appraisalCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: AuraColors.primaryLight,
-    padding: 18,
-    marginHorizontal: 16,
-    marginTop: 16,
-  },
-  appraisalHeader: {
-    marginBottom: 12,
-  },
-  aiBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  aiBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: AuraColors.primaryDark,
-  },
-  appraisalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: AuraColors.text,
-  },
-  appraisalSubtitle: {
-    fontSize: 12,
-    color: AuraColors.textMuted,
-    marginTop: 2,
-    lineHeight: 16,
-  },
-  generateAppraisalBtn: {
-    backgroundColor: AuraColors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  generateAppraisalBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
   sectionCard: {
     backgroundColor: '#ffffff',
     borderRadius: 20,
@@ -920,26 +803,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: '#ffffff',
-  },
-  suburbInsightsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: AuraColors.primaryLight,
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 18,
-  },
-  suburbInsightsTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: AuraColors.primaryDark,
-  },
-  suburbInsightsSub: {
-    fontSize: 11,
-    color: AuraColors.textMuted,
-    marginTop: 2,
   },
   similarSection: {
     marginHorizontal: 16,
