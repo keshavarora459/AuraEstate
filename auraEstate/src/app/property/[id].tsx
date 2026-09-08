@@ -22,6 +22,9 @@ import { fetchPropertyById, fetchSimilarProperties } from '../../services/api';
 import PropertyCard from '../../components/PropertyCard';
 import InspectionBookingModal from '../../components/InspectionBookingModal';
 import EnquiryModal from '../../components/EnquiryModal';
+import BuyPropertyModal from '../../components/BuyPropertyModal';
+import { OfferModal } from '../../components/OfferModal';
+import { PaymentModal } from '../../components/PaymentModal';
 
 import {
   getPropertyId,
@@ -73,6 +76,9 @@ export default function PropertyDetailScreen() {
   // Modals state
   const [bookingModalOpen, setBookingModalOpen] = useState<boolean>(false);
   const [enquiryModalOpen, setEnquiryModalOpen] = useState<boolean>(false);
+  const [buyModalOpen, setBuyModalOpen] = useState<boolean>(false);
+  const [offerModalOpen, setOfferModalOpen] = useState<boolean>(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (!id) return;
@@ -140,6 +146,32 @@ export default function PropertyDetailScreen() {
     }
 
     setEnquiryModalOpen(true);
+  };
+
+  const isBuyerOrGuest = !user || user.role === 'buyer';
+
+  const handleOpenBuyProperty = () => {
+    if (!user) {
+      Alert.alert(
+        'Sign In Required',
+        'Please sign in to your Buyer account to buy this property or submit a purchase offer.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => router.push('/auth/login' as any) },
+        ]
+      );
+      return;
+    }
+
+    if (user.role && user.role !== 'buyer' && user.role !== 'admin') {
+      Alert.alert(
+        'Buyer Access Only',
+        `You are currently signed in as a ${user.role}. Only registered buyer accounts can purchase or submit property offers.`
+      );
+      return;
+    }
+
+    setBuyModalOpen(true);
   };
 
   if (loading) {
@@ -215,7 +247,11 @@ export default function PropertyDetailScreen() {
         </Pressable>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, isBuyerOrGuest && { paddingBottom: 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Main Image Gallery Carousel */}
         <View style={styles.galleryContainer}>
           <ScrollView
@@ -412,6 +448,26 @@ export default function PropertyDetailScreen() {
         </View>
 
 
+        {/* Buy Property Card for Buyers */}
+        {isBuyerOrGuest && (
+          <View style={styles.buyPropertyCard}>
+            <View style={styles.buyPropertyHeader}>
+              <View style={styles.buyBadge}>
+                <Ionicons name="key" size={13} color="#ffffff" />
+                <Text style={styles.buyBadgeText}>BUYER ACQUISITION</Text>
+              </View>
+              <Text style={styles.buyPropertyTitle}>Ready to Buy This Home?</Text>
+              <Text style={styles.buyPropertySubtitle}>
+                Make a formal digital offer directly to the owner & agent, or reserve immediately with a holding deposit.
+              </Text>
+            </View>
+            <Pressable style={styles.buyPropertyCardBtn} onPress={handleOpenBuyProperty}>
+              <Ionicons name="cart" size={16} color="#ffffff" />
+              <Text style={styles.buyPropertyCardBtnText}>Buy Property / Make Offer</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Agent Contact Card */}
         <View style={styles.agentCard}>
           <Image source={{ uri: agent.avatar }} style={styles.agentAvatar} />
@@ -431,7 +487,6 @@ export default function PropertyDetailScreen() {
           </View>
         </View>
 
-
         {/* Similar Properties */}
         {similarProperties.length > 0 && (
           <View style={styles.similarSection}>
@@ -445,7 +500,46 @@ export default function PropertyDetailScreen() {
         )}
       </ScrollView>
 
+      {/* Fixed Bottom Action Bar for Buyers */}
+      {isBuyerOrGuest && (
+        <View style={styles.bottomBar}>
+          <Pressable style={styles.enquiryActionBtn} onPress={handleOpenEnquiry}>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={AuraColors.primaryDark} />
+            <Text style={styles.enquiryActionBtnText}>Enquire</Text>
+          </Pressable>
+          <Pressable style={styles.buyActionBtn} onPress={handleOpenBuyProperty}>
+            <Ionicons name="key" size={16} color="#ffffff" />
+            <Text style={styles.buyActionBtnText}>Buy Property</Text>
+          </Pressable>
+        </View>
+      )}
+
       {/* Modals */}
+      <BuyPropertyModal
+        visible={buyModalOpen}
+        onClose={() => setBuyModalOpen(false)}
+        property={property}
+        onSelectOffer={() => setOfferModalOpen(true)}
+        onSelectReserve={() => setPaymentModalOpen(true)}
+      />
+      <OfferModal
+        visible={offerModalOpen}
+        onClose={() => setOfferModalOpen(false)}
+        property={property}
+        onSuccess={() => {
+          Alert.alert('Offer Submitted', 'Your formal purchase offer has been submitted to the agent and owner.');
+        }}
+      />
+      <PaymentModal
+        visible={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        defaultPackage="Holding Deposit"
+        defaultAmount={5000}
+        propertyId={propId}
+        onSuccess={() => {
+          Alert.alert('Deposit Confirmed', 'Your $5,000 holding deposit has been processed and the property has been reserved!');
+        }}
+      />
       <InspectionBookingModal
         visible={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
@@ -838,5 +932,113 @@ const styles = StyleSheet.create({
   similarSection: {
     marginHorizontal: 16,
     marginTop: 20,
+  },
+  buyPropertyCard: {
+    backgroundColor: '#0f172a',
+    borderRadius: 22,
+    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+  buyPropertyHeader: {
+    marginBottom: 16,
+  },
+  buyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: AuraColors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  buyBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  buyPropertyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  buyPropertySubtitle: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  buyPropertyCardBtn: {
+    backgroundColor: AuraColors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  buyPropertyCardBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 14,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  enquiryActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: AuraColors.primaryLight,
+    borderWidth: 1,
+    borderColor: AuraColors.primary,
+  },
+  enquiryActionBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: AuraColors.primaryDark,
+  },
+  buyActionBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: AuraColors.primary,
+    shadowColor: AuraColors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  buyActionBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#ffffff',
   },
 });
