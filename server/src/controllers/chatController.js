@@ -539,25 +539,102 @@ const markThreadRead = async (req, res, next) => {
   }
 };
 
-// @desc  Get all expert connection requests for the logged-in agent
+// @desc  Get all expert connection requests / enquiries for the logged-in agent or buyer
 // @route GET /api/chat/expert-requests
 const getExpertRequests = async (req, res, next) => {
   try {
     if (mongoose.connection.readyState !== 1) {
-      return res.json({ success: true, requests: [], count: 0 });
+      return res.json({ success: true, requests: [], inquiries: [], count: 0 });
     }
     const filter = {};
     if (req.user.role === 'agent' || req.user.role === 'seller') {
       filter.agentId = req.user._id;
+    } else if (req.user.role === 'buyer') {
+      filter.buyerId = req.user._id;
     }
     const requests = await ContactRequest.find(filter)
       .sort({ createdAt: -1 })
       .limit(50)
-      .populate('buyerId', 'name email avatar')
-      .populate('propertyId', 'title images address');
+      .populate('buyerId', 'name email avatar phone')
+      .populate('propertyId', 'title images address price');
 
     const unreadCount = requests.filter(r => !r.isRead).length;
-    res.json({ success: true, count: requests.length, unreadCount, requests });
+    res.json({ success: true, count: requests.length, unreadCount, requests, inquiries: requests });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc  Submit an enquiry request to an agent for a property
+// @route POST /api/chat/enquiry
+const createEnquiry = async (req, res, next) => {
+  try {
+    const { propertyId, agentId, message, phone, email, name } = req.body;
+
+    const buyerId = req.user._id;
+    const buyerName = (name || req.user.name || 'Interested Buyer').trim();
+    const buyerEmail = (email || req.user.email || '').trim();
+    const buyerPhone = (phone || req.user.phone || '').trim();
+
+    if (!buyerPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required so the agent can contact you.'
+      });
+    }
+
+    if (!buyerEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email address is required to submit an enquiry.'
+      });
+    }
+
+    // Resolve property and agent
+    let propTitle = '';
+    let targetAgentId = agentId;
+    let targetAgentName = '';
+
+    if (propertyId && mongoose.Types.ObjectId.isValid(propertyId)) {
+      const prop = await Property.findById(propertyId).populate('agentId', 'name email phone').lean();
+      if (prop) {
+        propTitle = prop.title || 'Luxury Property';
+        if (!targetAgentId && prop.agentId) {
+          targetAgentId = prop.agentId._id || prop.agentId;
+          targetAgentName = prop.agentId.name || '';
+        }
+      }
+    }
+
+    if (targetAgentId && !targetAgentName && mongoose.Types.ObjectId.isValid(targetAgentId)) {
+      const ag = await User.findById(targetAgentId).select('name email phone').lean();
+      if (ag) targetAgentName = ag.name;
+    }
+
+    // Save phone to buyer profile if not yet set
+    if (buyerPhone && !req.user.phone) {
+      await User.findByIdAndUpdate(buyerId, { phone: buyerPhone }).catch(() => {});
+    }
+
+    const contactRequest = await ContactRequest.create({
+      buyerName,
+      buyerEmail,
+      buyerPhone,
+      buyerId,
+      agentId: targetAgentId || null,
+      agentName: targetAgentName,
+      propertyId: propertyId || null,
+      propertyTitle: propTitle,
+      buyerMessage: message || 'I am interested in this property and would like more details or to schedule an inspection.',
+      status: 'pending',
+      isRead: false
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Enquiry submitted successfully! The agent has received your details.',
+      enquiry: contactRequest
+    });
   } catch (error) {
     next(error);
   }
@@ -718,5 +795,6 @@ module.exports = {
   markThreadRead,
   getExpertRequests,
   markExpertRequestRead,
+  createEnquiry,
   deleteThread
 };

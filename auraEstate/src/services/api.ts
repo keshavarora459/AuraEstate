@@ -163,6 +163,8 @@ export const deleteChatThread = (otherUserId: string) => api.delete(`/chat/threa
 // ==========================================
 export const fetchExpertRequests = () => api.get('/chat/expert-requests');
 export const markExpertRequestAsRead = (id: string) => api.patch(`/chat/expert-requests/${id}/read`);
+export const sendPropertyEnquiry = (data: { propertyId: string; agentId?: string; message?: string; phone: string; email: string; name: string }) =>
+  api.post('/chat/enquiry', data);
 
 // ==========================================
 // AI API

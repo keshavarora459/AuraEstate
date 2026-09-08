@@ -8,6 +8,7 @@ const contactRequestSchema = new mongoose.Schema(
   {
     buyerName:     { type: String, required: true },
     buyerEmail:    { type: String, default: '' },
+    buyerPhone:    { type: String, default: '' },
     buyerId:       { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     agentId:       { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     agentName:     { type: String, default: '' },

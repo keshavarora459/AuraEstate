@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,7 +58,7 @@ export default function AgentDashboardScreen() {
       ]);
 
       if (pRes.data?.success) setProperties(pRes.data.properties || []);
-      if (inqRes.data?.success) setInquiries(inqRes.data.inquiries || []);
+      if (inqRes.data?.success) setInquiries(inqRes.data.inquiries || inqRes.data.requests || []);
       if (oRes.data?.success) setOffers(oRes.data.offers || []);
       if (bRes.data?.success) setBookings(bRes.data.bookings || []);
     } catch (err) {
@@ -355,7 +356,7 @@ export default function AgentDashboardScreen() {
             {activeTab === 'inquiries' && (
               <View style={styles.tabSection}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Client & Investor Inquiries</Text>
+                  <Text style={styles.sectionTitle}>Buyer Property Inquiries</Text>
                   <Text style={styles.sectionCounter}>Total: {inquiries.length}</Text>
                 </View>
 
@@ -364,30 +365,95 @@ export default function AgentDashboardScreen() {
                     <Ionicons name="mail-outline" size={42} color={COLORS.textMuted} />
                     <Text style={styles.emptyTitle}>No Inquiries Received</Text>
                     <Text style={styles.emptySubtitle}>
-                      When prospective buyers request agent callbacks, they will appear here.
+                      When prospective buyers submit property enquiries with their phone number and email, they will appear here.
                     </Text>
                   </View>
                 ) : (
-                  inquiries.map((inq) => (
-                    <View key={inq._id} style={styles.itemCard}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.itemTitle}>{inq.userName || inq.name || 'Client Lead'}</Text>
-                          <Text style={styles.itemAmount}>{inq.phone || 'No phone'}</Text>
-                          <Text style={styles.itemSubtext}>{inq.userEmail || inq.email}</Text>
+                  inquiries.map((inq) => {
+                    const buyerName = inq.buyerName || inq.userName || inq.name || 'Buyer Lead';
+                    const buyerPhone = inq.buyerPhone || inq.phone || inq.buyerId?.phone;
+                    const buyerEmail = inq.buyerEmail || inq.userEmail || inq.email || inq.buyerId?.email;
+                    const propTitle = inq.propertyTitle || inq.propertyId?.title;
+                    const message = inq.buyerMessage || inq.message || 'Interested in this property.';
+                    const isRead = inq.status === 'Read' || inq.status === 'contacted' || inq.isRead;
+
+                    return (
+                      <View key={inq._id} style={styles.itemCard}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.itemTitle}>{buyerName}</Text>
+                            {propTitle && (
+                              <Text style={[styles.itemSubtext, { color: COLORS.primary, fontWeight: '700', marginTop: 2 }]}>
+                                🏡 {propTitle}
+                              </Text>
+                            )}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                              <Ionicons name="call" size={13} color={COLORS.primary} />
+                              <Text style={styles.itemAmount}>{buyerPhone || 'No phone provided'}</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                              <Ionicons name="mail" size={13} color={COLORS.textMuted} />
+                              <Text style={styles.itemSubtext}>{buyerEmail || 'No email provided'}</Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            style={[styles.statusPill, isRead ? styles.statusRead : styles.statusUnread]}
+                            onPress={() => handleMarkAsRead(inq._id)}
+                          >
+                            <Text style={[styles.statusPillText, isRead ? styles.statusReadText : styles.statusUnreadText]}>
+                              {isRead ? 'Contacted' : 'New Lead'}
+                            </Text>
+                          </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                          style={[styles.statusPill, inq.status === 'Read' ? styles.statusRead : styles.statusUnread]}
-                          onPress={() => handleMarkAsRead(inq._id)}
-                        >
-                          <Text style={[styles.statusPillText, inq.status === 'Read' ? styles.statusReadText : styles.statusUnreadText]}>
-                            {inq.status || 'New'}
-                          </Text>
-                        </TouchableOpacity>
+
+                        <Text style={styles.inquiryMessage}>{message}</Text>
+
+                        {/* Direct Contact Actions */}
+                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                          {buyerPhone && (
+                            <TouchableOpacity
+                              style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 6,
+                                backgroundColor: '#f0fdf4',
+                                borderWidth: 1,
+                                borderColor: '#86efac',
+                                paddingVertical: 8,
+                                borderRadius: 10,
+                              }}
+                              onPress={() => Linking.openURL(`tel:${buyerPhone}`)}
+                            >
+                              <Ionicons name="call" size={14} color="#15803d" />
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#15803d' }}>Call Buyer</Text>
+                            </TouchableOpacity>
+                          )}
+                          {buyerEmail && (
+                            <TouchableOpacity
+                              style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 6,
+                                backgroundColor: '#f0f9ff',
+                                borderWidth: 1,
+                                borderColor: COLORS.primary,
+                                paddingVertical: 8,
+                                borderRadius: 10,
+                              }}
+                              onPress={() => Linking.openURL(`mailto:${buyerEmail}?subject=Regarding your enquiry for ${propTitle || 'Property'}`)}
+                            >
+                              <Ionicons name="mail" size={14} color={COLORS.primaryDark} />
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.primaryDark }}>Email Buyer</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
-                      <Text style={styles.inquiryMessage}>{inq.message || 'Interested in property inspection.'}</Text>
-                    </View>
-                  ))
+                    );
+                  })
                 )}
               </View>
             )}

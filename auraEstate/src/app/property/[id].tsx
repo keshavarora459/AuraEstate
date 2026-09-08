@@ -21,7 +21,7 @@ import { fetchPropertyById, fetchSimilarProperties, generatePropertyAppraisal } 
 import PropertyCard from '../../components/PropertyCard';
 import AppraisalReportModal from '../../components/AppraisalReportModal';
 import InspectionBookingModal from '../../components/InspectionBookingModal';
-import LiveChatModal from '../../components/LiveChatModal';
+import EnquiryModal from '../../components/EnquiryModal';
 
 import {
   getPropertyId,
@@ -53,7 +53,7 @@ const NEARBY_SCHOOLS = [
 export default function PropertyDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { toggleSavedProperty, isSaved } = useAuth();
+  const { user, toggleSavedProperty, isSaved } = useAuth();
 
   const cached = getCachedProperty(id);
   const [property, setProperty] = useState<any | null>(cached);
@@ -67,7 +67,7 @@ export default function PropertyDetailScreen() {
   const [appraisalLoading, setAppraisalLoading] = useState<boolean>(false);
 
   const [bookingModalOpen, setBookingModalOpen] = useState<boolean>(false);
-  const [chatModalOpen, setChatModalOpen] = useState<boolean>(false);
+  const [enquiryModalOpen, setEnquiryModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (!id) return;
@@ -129,6 +129,30 @@ export default function PropertyDetailScreen() {
   const handleCallAgent = (phone?: string) => {
     const num = phone || '+61480089451';
     Linking.openURL(`tel:${num}`);
+  };
+
+  const handleOpenEnquiry = () => {
+    if (!user) {
+      Alert.alert(
+        'Sign In Required',
+        'Please sign in to your buyer account to send a property enquiry to the agent.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => router.push('/auth/login' as any) },
+        ]
+      );
+      return;
+    }
+
+    if (user.role && user.role !== 'buyer' && user.role !== 'admin') {
+      Alert.alert(
+        'Buyer Access Only',
+        'Only registered buyer accounts can send property enquiries to agents.'
+      );
+      return;
+    }
+
+    setEnquiryModalOpen(true);
   };
 
   if (loading) {
@@ -420,9 +444,9 @@ export default function PropertyDetailScreen() {
               <Ionicons name="call" size={16} color={AuraColors.text} />
               <Text style={styles.agentCallBtnText}>Call</Text>
             </Pressable>
-            <Pressable style={styles.agentMsgBtn} onPress={() => setChatModalOpen(true)}>
-              <Ionicons name="chatbubbles" size={16} color="#ffffff" />
-              <Text style={styles.agentMsgBtnText}>Live Chat</Text>
+            <Pressable style={styles.agentMsgBtn} onPress={handleOpenEnquiry}>
+              <Ionicons name="mail" size={16} color="#ffffff" />
+              <Text style={styles.agentMsgBtnText}>Send Enquiry</Text>
             </Pressable>
           </View>
         </View>
@@ -466,11 +490,11 @@ export default function PropertyDetailScreen() {
         onClose={() => setBookingModalOpen(false)}
         property={property}
       />
-      <LiveChatModal
-        visible={chatModalOpen}
-        onClose={() => setChatModalOpen(false)}
-        agent={agent}
+      <EnquiryModal
+        visible={enquiryModalOpen}
+        onClose={() => setEnquiryModalOpen(false)}
         property={property}
+        agent={agent}
       />
     </SafeAreaView>
   );
