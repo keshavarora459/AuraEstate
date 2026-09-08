@@ -77,39 +77,48 @@ const getProperties = async (req, res, next) => {
     } = req.query;
 
     const query = {};
+    const andConditions = [];
 
     if (req.query.status) {
       query.status = req.query.status;
     } else {
-      query.$or = [
-        { status: { $in: ['Published', 'Approved', 'Submitted', 'Pending Review'] } },
-        { status: { $exists: false } },
-        { status: null }
-      ];
+      andConditions.push({
+        $or: [
+          { status: { $in: ['Published', 'Approved', 'Submitted', 'Pending Review'] } },
+          { status: { $exists: false } },
+          { status: null }
+        ]
+      });
     }
 
     if (listingType && listingType !== 'All') {
-      query.$or = [
-        { listingType: listingType },
-        { listing_type: listingType }
-      ];
+      andConditions.push({
+        $or: [
+          { listingType: listingType },
+          { listing_type: listingType }
+        ]
+      });
     }
 
     if (propertyType && propertyType !== 'All') {
-      query.$or = [
-        { propertyType: propertyType },
-        { property_type: propertyType }
-      ];
+      andConditions.push({
+        $or: [
+          { propertyType: propertyType },
+          { property_type: propertyType }
+        ]
+      });
     }
 
     if (minPrice || maxPrice) {
       const priceFilter = {};
       if (minPrice) priceFilter.$gte = Number(minPrice);
       if (maxPrice) priceFilter.$lte = Number(maxPrice);
-      query.$or = [
-        { price: priceFilter },
-        { price_numeric: priceFilter }
-      ];
+      andConditions.push({
+        $or: [
+          { price: priceFilter },
+          { price_numeric: priceFilter }
+        ]
+      });
     }
 
     if (bedrooms) {
@@ -120,29 +129,55 @@ const getProperties = async (req, res, next) => {
     }
 
     if (suburb) {
-      query.$or = [
-        { 'address.suburb': { $regex: suburb, $options: 'i' } },
-        { suburb_name: { $regex: suburb, $options: 'i' } },
-        { address: { $regex: suburb, $options: 'i' } }
-      ];
+      andConditions.push({
+        $or: [
+          { 'address.suburb': { $regex: suburb, $options: 'i' } },
+          { suburb_name: { $regex: suburb, $options: 'i' } },
+          { address: { $regex: suburb, $options: 'i' } }
+        ]
+      });
     } else if (city) {
-      query.$or = [
-        { 'address.city': { $regex: city, $options: 'i' } },
-        { suburb_name: { $regex: city, $options: 'i' } },
-        { address: { $regex: city, $options: 'i' } }
-      ];
+      andConditions.push({
+        $or: [
+          { 'address.city': { $regex: city, $options: 'i' } },
+          { suburb_name: { $regex: city, $options: 'i' } },
+          { address: { $regex: city, $options: 'i' } }
+        ]
+      });
     }
 
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { street_address: { $regex: search, $options: 'i' } },
-        { address: { $regex: search, $options: 'i' } },
-        { suburb_name: { $regex: search, $options: 'i' } },
-        { 'address.street': { $regex: search, $options: 'i' } },
-        { 'address.suburb': { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+      const searchTrimmed = search.trim();
+      const tokens = searchTrimmed.split(/\s+/).filter(t => t.length > 0);
+      const searchOrClauses = [
+        { title: { $regex: searchTrimmed, $options: 'i' } },
+        { street_address: { $regex: searchTrimmed, $options: 'i' } },
+        { address: { $regex: searchTrimmed, $options: 'i' } },
+        { suburb_name: { $regex: searchTrimmed, $options: 'i' } },
+        { 'address.street': { $regex: searchTrimmed, $options: 'i' } },
+        { 'address.suburb': { $regex: searchTrimmed, $options: 'i' } },
+        { description: { $regex: searchTrimmed, $options: 'i' } }
       ];
+
+      // Add vowel-tolerant and tokenized clauses (e.g. cullin -> c[aeiou]ll[aeiou]n -> Cullen)
+      for (const tok of tokens) {
+        if (tok.length >= 3) {
+          const vowelPattern = tok.replace(/[aeiou]/gi, '[aeiou]');
+          searchOrClauses.push(
+            { title: { $regex: vowelPattern, $options: 'i' } },
+            { street_address: { $regex: vowelPattern, $options: 'i' } },
+            { address: { $regex: vowelPattern, $options: 'i' } },
+            { suburb_name: { $regex: vowelPattern, $options: 'i' } },
+            { description: { $regex: vowelPattern, $options: 'i' } }
+          );
+        }
+      }
+
+      andConditions.push({ $or: searchOrClauses });
+    }
+
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
     }
 
     const pageNum = parseInt(page, 10) || 1;

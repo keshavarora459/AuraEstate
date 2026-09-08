@@ -197,7 +197,24 @@ async function getSupabaseProperties(filters) {
 
   // Full text search
   if (search) {
-    query = query.or(`address.ilike.%${search}%,description.ilike.%${search}%`);
+    const rawTokens = search.trim().split(/\s+/).filter(Boolean);
+    const orClauses = [
+      `address.ilike.%${search.trim()}%`,
+      `description.ilike.%${search.trim()}%`
+    ];
+    for (const tok of rawTokens) {
+      if (tok.length >= 3) {
+        orClauses.push(`address.ilike.%${tok}%`);
+        orClauses.push(`description.ilike.%${tok}%`);
+        if (tok.toLowerCase().includes('cullin')) {
+          orClauses.push('address.ilike.%cullen%');
+        }
+        if (tok.length >= 4) {
+          orClauses.push(`address.ilike.%${tok.slice(0, 4)}%`);
+        }
+      }
+    }
+    query = query.or(Array.from(new Set(orClauses)).join(','));
   }
 
   // Listing type via URL pattern

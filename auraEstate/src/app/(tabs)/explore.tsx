@@ -90,6 +90,31 @@ export default function ExploreScreen() {
     }
   }, []);
 
+  // Synchronize incoming search params (e.g. from Home search) into filters
+  useEffect(() => {
+    setFilters((prev) => {
+      let updated = false;
+      const next = { ...prev };
+      if (searchParams.search !== undefined && searchParams.search !== prev.search) {
+        next.search = searchParams.search || '';
+        updated = true;
+      }
+      if (searchParams.suburb !== undefined && searchParams.suburb !== prev.suburb) {
+        next.suburb = searchParams.suburb || '';
+        updated = true;
+      }
+      if (searchParams.listingType !== undefined && searchParams.listingType !== prev.listingType) {
+        next.listingType = searchParams.listingType || '';
+        updated = true;
+      }
+      if (searchParams.propertyType !== undefined && searchParams.propertyType !== prev.propertyType) {
+        next.propertyType = searchParams.propertyType || '';
+        updated = true;
+      }
+      return updated ? next : prev;
+    });
+  }, [searchParams.search, searchParams.suburb, searchParams.listingType, searchParams.propertyType]);
+
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -142,10 +167,16 @@ export default function ExploreScreen() {
           <Ionicons name="search" size={18} color={AuraColors.primary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search address, suburb, title..."
+            placeholder="Search address, title, street or suburb..."
             placeholderTextColor={AuraColors.textLight}
             value={filters.search}
             onChangeText={(t) => setFilters((prev) => ({ ...prev, search: t }))}
+            onSubmitEditing={() => {
+              if (debounceTimer.current) clearTimeout(debounceTimer.current);
+              setPage(1);
+              doFetch(filters, 1);
+            }}
+            returnKeyType="search"
           />
           {filters.search ? (
             <Pressable onPress={() => setFilters((prev) => ({ ...prev, search: '' }))}>

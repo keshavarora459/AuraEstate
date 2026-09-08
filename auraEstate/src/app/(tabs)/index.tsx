@@ -69,11 +69,12 @@ export default function HomeScreen() {
   };
 
   const handleHeroSearch = () => {
+    const q = searchQuery.trim();
     router.push({
-      pathname: '/explore',
+      pathname: '/(tabs)/explore',
       params: {
-        suburb: searchQuery,
-        propertyType,
+        search: q || undefined,
+        propertyType: propertyType !== 'All' ? propertyType : undefined,
       },
     });
   };
@@ -117,13 +118,15 @@ export default function HomeScreen() {
           {/* Search Box */}
           <View style={styles.searchBox}>
             <View style={styles.inputWithIcon}>
-              <Ionicons name="location-outline" size={18} color={AuraColors.primary} />
+              <Ionicons name="search-outline" size={18} color={AuraColors.primary} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Suburb (e.g. Point Piper, Toorak)..."
+                placeholder="Search address, title, street or suburb..."
                 placeholderTextColor={AuraColors.textLight}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
+                onSubmitEditing={handleHeroSearch}
+                returnKeyType="search"
               />
             </View>
 

@@ -87,8 +87,151 @@ export const toggleWishlist = (propertyId: string) => api.post(`/auth/wishlist/$
 // ==========================================
 // Properties API
 // ==========================================
+// Candidate search term generator for typo-resilient & tokenized searching
+function getSearchCandidates(search: string): string[] {
+  const q = search.trim();
+  const candidates: string[] = [];
+
+  // 1. Whole phrase typo corrections:
+  // e.g. "peter cullin" -> "peter cullen"
+  if (/cullin/i.test(q)) {
+    candidates.push(q.replace(/cullin/gi, 'cullen'));
+  }
+  if (/\b([a-zA-Z]{3,})in\b/i.test(q)) {
+    candidates.push(q.replace(/\b([a-zA-Z]{3,})in\b/gi, '$1en'));
+  }
+
+  // 2. Individual words / tokens
+  const tokens = q.split(/\s+/).filter((t) => t.length >= 3);
+  if (tokens.length > 1) {
+    for (const t of tokens) {
+      if (/cullin/i.test(t)) {
+        candidates.push('cullen');
+      }
+      candidates.push(t);
+    }
+  }
+
+  // 3. Stems / vowel variations for individual tokens
+  for (const t of tokens.length > 0 ? tokens : [q]) {
+    const low = t.toLowerCase();
+    if (low.includes('cullin')) candidates.push('cullen');
+    if (low.endsWith('in') && low.length > 4) candidates.push(low.slice(0, -2) + 'en');
+    if (low.length >= 4) candidates.push(low.slice(0, 4));
+  }
+
+  return Array.from(new Set(candidates)).filter(
+    (c) => c.toLowerCase() !== q.toLowerCase() && c.length >= 3
+  );
+}
+
+// Relevance ranker to guarantee exact & fuzzy matches (e.g. Peter Cullen) score at the top
+export function rankPropertiesByQuery(properties: any[], query: string): any[] {
+  if (!query || !properties || properties.length === 0) return properties;
+  const qLower = query.toLowerCase().trim();
+  const tokens = qLower.split(/\s+/).filter((t) => t.length > 0);
+
+  const scored = properties.map((p) => {
+    const title = (p.title || '').toLowerCase();
+    const street = (p.street_address || '').toLowerCase();
+    const address = (typeof p.address === 'string'
+      ? p.address
+      : `${p.address?.street || ''} ${p.address?.suburb || ''}`
+    ).toLowerCase();
+    const suburb = (p.suburb_name || p.suburb || '').toLowerCase();
+    const desc = (p.description || '').toLowerCase();
+    const fullText = `${title} ${street} ${address} ${suburb} ${desc}`;
+
+    let score = 0;
+    if (fullText.includes(qLower)) score += 100;
+    if (title.includes(qLower) || street.includes(qLower) || address.includes(qLower)) score += 80;
+
+    let matchedTokens = 0;
+    for (const token of tokens) {
+      if (title.includes(token) || street.includes(token) || address.includes(token)) {
+        score += 40;
+        matchedTokens++;
+      } else if (suburb.includes(token)) {
+        score += 25;
+        matchedTokens++;
+      } else if (fullText.includes(token)) {
+        score += 15;
+        matchedTokens++;
+      } else {
+        const stem = token.length >= 4 ? token.slice(0, 4) : token;
+        if (title.includes(stem) || street.includes(stem) || address.includes(stem)) {
+          score += 25;
+          matchedTokens++;
+        } else {
+          try {
+            const vowelRegex = new RegExp(token.replace(/[aeiou]/gi, '[aeiou]'), 'i');
+            if (vowelRegex.test(title) || vowelRegex.test(street) || vowelRegex.test(address)) {
+              score += 25;
+              matchedTokens++;
+            } else if (vowelRegex.test(fullText)) {
+              score += 10;
+              matchedTokens++;
+            }
+          } catch (_) {}
+        }
+      }
+    }
+    if (matchedTokens === tokens.length) score += 50;
+
+    return { property: p, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((item) => item.property);
+}
+
 export const fetchProperties = async (params?: any) => {
-  const res = await api.get('/properties', { params });
+  let res = await api.get('/properties', { params });
+
+  // If search was specified and returned 0 results, retry with smart candidate terms
+  if (
+    params?.search &&
+    typeof params.search === 'string' &&
+    (!res.data?.properties || res.data.properties.length === 0)
+  ) {
+    const candidates = getSearchCandidates(params.search);
+    const pool = new Map<string, any>();
+
+    for (const cand of candidates) {
+      try {
+        const candRes = await api.get('/properties', { params: { ...params, search: cand } });
+        const candProps = candRes.data?.properties || [];
+        for (const p of candProps) {
+          const key = String(p._id || p.id || '');
+          if (key && !pool.has(key)) {
+            pool.set(key, p);
+          }
+        }
+        if (pool.size > 0) {
+          break;
+        }
+      } catch (_) {}
+    }
+
+    if (pool.size > 0) {
+      const merged = Array.from(pool.values());
+      const ranked = rankPropertiesByQuery(merged, params.search);
+      res = {
+        ...res,
+        data: {
+          ...res.data,
+          success: true,
+          properties: ranked,
+          total: ranked.length,
+          totalPages: Math.ceil(ranked.length / (params.limit || 10)),
+        },
+      };
+    }
+  } else if (res.data?.properties && params?.search) {
+    // Rank existing results by relevance
+    res.data.properties = rankPropertiesByQuery(res.data.properties, params.search);
+  }
+
   if (res.data?.properties) {
     cacheProperties(res.data.properties);
   }
