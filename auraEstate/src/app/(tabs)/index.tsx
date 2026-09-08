@@ -26,7 +26,6 @@ import PropertyCard from '../../components/PropertyCard';
 export default function HomeScreen() {
   const router = useRouter();
 
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [propertyType, setPropertyType] = useState<string>('');
   const [featuredProperties, setFeaturedProperties] = useState<any[]>([]);
   const [agencies, setAgencies] = useState<any[]>([]);
@@ -68,16 +67,7 @@ export default function HomeScreen() {
     loadData();
   };
 
-  const handleHeroSearch = () => {
-    const q = searchQuery.trim();
-    router.push({
-      pathname: '/(tabs)/explore',
-      params: {
-        search: q || undefined,
-        propertyType: propertyType !== 'All' ? propertyType : undefined,
-      },
-    });
-  };
+
 
   return (
     <SafeAreaView style={styles.safeContainer}>
@@ -114,27 +104,6 @@ export default function HomeScreen() {
           <Text style={styles.heroDescription}>
             Explore waterfront villas, sky penthouses, and high-yield commercial assets across Australia.
           </Text>
-
-          {/* Search Box */}
-          <View style={styles.searchBox}>
-            <View style={styles.inputWithIcon}>
-              <Ionicons name="search-outline" size={18} color={AuraColors.primary} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search address, title, street or suburb..."
-                placeholderTextColor={AuraColors.textLight}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleHeroSearch}
-                returnKeyType="search"
-              />
-            </View>
-
-            <Pressable style={styles.searchBtn} onPress={handleHeroSearch}>
-              <Ionicons name="search" size={16} color="#ffffff" />
-              <Text style={styles.searchBtnText}>Search Properties</Text>
-            </Pressable>
-          </View>
 
           {/* Quick Metrics */}
           <View style={styles.metricsRow}>
