@@ -239,42 +239,46 @@ export default function PropertyDetailScreen() {
         {/* Key Specs Bar */}
         <View style={styles.specsBar}>
           <View style={styles.specColumn}>
-            <Ionicons name="bed-outline" size={20} color={AuraColors.primary} />
-            <Text style={styles.specVal}>{bedrooms}</Text>
+            <Ionicons name="bed-outline" size={18} color={AuraColors.primary} />
+            <Text style={styles.specVal} numberOfLines={1}>{bedrooms}</Text>
             <Text style={styles.specUnit}>Beds</Text>
           </View>
+          <View style={styles.specDivider} />
           <View style={styles.specColumn}>
-            <Ionicons name="water-outline" size={20} color={AuraColors.primary} />
-            <Text style={styles.specVal}>{bathrooms}</Text>
+            <Ionicons name="water-outline" size={18} color={AuraColors.primary} />
+            <Text style={styles.specVal} numberOfLines={1}>{bathrooms}</Text>
             <Text style={styles.specUnit}>Baths</Text>
           </View>
+          <View style={styles.specDivider} />
           <View style={styles.specColumn}>
-            <Ionicons name="car-outline" size={20} color={AuraColors.primary} />
-            <Text style={styles.specVal}>{garages}</Text>
+            <Ionicons name="car-outline" size={18} color={AuraColors.primary} />
+            <Text style={styles.specVal} numberOfLines={1}>{garages}</Text>
             <Text style={styles.specUnit}>{garages > 1 ? 'Cars' : 'Car'}</Text>
           </View>
+          <View style={styles.specDivider} />
           {landArea ? (
             <View style={styles.specColumn}>
-              <Ionicons name="scan-outline" size={20} color={AuraColors.primary} />
-              <Text style={styles.specVal}>{landArea}</Text>
+              <Ionicons name="scan-outline" size={18} color={AuraColors.primary} />
+              <Text style={styles.specVal} numberOfLines={1} ellipsizeMode="tail">{landArea}</Text>
               <Text style={styles.specUnit}>Land</Text>
             </View>
           ) : floorArea ? (
             <View style={styles.specColumn}>
-              <Ionicons name="business-outline" size={20} color={AuraColors.primary} />
-              <Text style={styles.specVal}>{floorArea}</Text>
+              <Ionicons name="business-outline" size={18} color={AuraColors.primary} />
+              <Text style={styles.specVal} numberOfLines={1} ellipsizeMode="tail">{floorArea}</Text>
               <Text style={styles.specUnit}>Floor</Text>
             </View>
           ) : (
             <View style={styles.specColumn}>
-              <Ionicons name="scan-outline" size={20} color={AuraColors.primary} />
-              <Text style={styles.specVal}>Modern</Text>
+              <Ionicons name="scan-outline" size={18} color={AuraColors.primary} />
+              <Text style={styles.specVal} numberOfLines={1}>Modern</Text>
               <Text style={styles.specUnit}>Design</Text>
             </View>
           )}
+          <View style={styles.specDivider} />
           <View style={styles.specColumn}>
-            <Ionicons name="calendar-outline" size={20} color={AuraColors.primary} />
-            <Text style={styles.specVal}>{property.yearBuilt || '2024'}</Text>
+            <Ionicons name="calendar-outline" size={18} color={AuraColors.primary} />
+            <Text style={styles.specVal} numberOfLines={1}>{property.yearBuilt || '2024'}</Text>
             <Text style={styles.specUnit}>Built</Text>
           </View>
         </View>
@@ -646,9 +650,11 @@ const styles = StyleSheet.create({
   },
   specsBar: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#f8fafc',
-    paddingVertical: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     marginHorizontal: 16,
     marginTop: 14,
     borderRadius: 18,
@@ -656,18 +662,29 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   specColumn: {
+    flex: 1,
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  specDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#e2e8f0',
   },
   specVal: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: AuraColors.text,
+    marginTop: 3,
+    textAlign: 'center',
   },
   specUnit: {
     fontSize: 10,
     color: AuraColors.textMuted,
     fontWeight: '600',
+    marginTop: 1,
+    textAlign: 'center',
   },
   appraisalCard: {
     backgroundColor: '#f8fafc',

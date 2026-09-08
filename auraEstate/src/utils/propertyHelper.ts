@@ -146,34 +146,102 @@ export const getListingType = (p: any): string => {
 
 export const getPropertyBedrooms = (p: any): number => {
   if (!p) return 2;
-  const num = Number(p.bedrooms ?? p.bedroom ?? 2);
-  return isNaN(num) ? 2 : num;
+  const raw = p.bedrooms ?? p.bedroom;
+  if (raw !== undefined && raw !== null && !isNaN(Number(raw)) && Number(raw) > 0) {
+    return Number(raw);
+  }
+  const text = `${p.title || ''} ${p.description || ''} ${p.land_size || ''} ${p.floor_size || ''}`;
+  const m = text.match(/(\d+)\s*(?:bed|bedroom)/i);
+  if (m) return parseInt(m[1], 10);
+  return 2;
 };
 
 export const getPropertyBathrooms = (p: any): number => {
   if (!p) return 2;
-  const num = Number(p.bathrooms ?? p.bathroom ?? 2);
-  return isNaN(num) ? 2 : num;
+  const raw = p.bathrooms ?? p.bathroom;
+  const text = `${p.title || ''} ${p.description || ''} ${p.land_size || ''} ${p.floor_size || ''}`;
+  const m = text.match(/(\d+)\s*(?:bath|bathroom|ba\b)/i);
+  if (m) {
+    return parseInt(m[1], 10);
+  }
+  if (raw !== undefined && raw !== null && !isNaN(Number(raw)) && Number(raw) > 0) {
+    return Number(raw);
+  }
+  return 2;
 };
 
 export const getPropertyGarages = (p: any): number => {
   if (!p) return 1;
-  const num = Number(p.garages ?? p.parkingSpaces ?? p.carSpaces ?? 1);
-  return isNaN(num) ? 1 : num;
+  const raw = p.garages ?? p.parkingSpaces ?? p.carSpaces;
+  const text = `${p.title || ''} ${p.description || ''} ${p.land_size || ''} ${p.floor_size || ''}`;
+  const m = text.match(/(\d+)\s*(?:car|garage|parking)/i);
+  if (m) {
+    return parseInt(m[1], 10);
+  }
+  if (raw !== undefined && raw !== null && !isNaN(Number(raw)) && Number(raw) > 0) {
+    return Number(raw);
+  }
+  return 1;
 };
 
 export const getPropertyLandArea = (p: any): string | null => {
   if (!p) return null;
-  if (p.land_size) return String(p.land_size);
-  if (p.landArea && Number(p.landArea) > 0) return `${p.landArea}m²`;
-  if (p.block_area) return `${p.block_area}m²`;
+  const raw = p.land_size || p.landArea || p.block_area;
+  if (!raw) return null;
+
+  if (typeof raw === 'number' && raw > 0) {
+    return `${raw}m²`;
+  }
+
+  const str = String(raw).trim();
+  if (!str) return null;
+
+  // Extract metric sizes: 540m², 540 sqm, 540 m2, 1.2 ha, 650 m²
+  const match = str.match(/(\d+(?:[.,]\d+)?\s*(?:m²|m2|sqm|sq\s*m|ha|acres?))/i);
+  if (match) {
+    return match[1].replace(/\s+/g, '').replace(/m2/i, 'm²').replace(/sqm/i, 'm²');
+  }
+
+  // Numeric only: "540" -> "540m²"
+  if (/^\d+(?:[.,]\d+)?$/.test(str)) {
+    return `${str}m²`;
+  }
+
+  // Short clean text: e.g. "540 m²"
+  if (str.length <= 10 && /\d/.test(str)) {
+    return str;
+  }
+
   return null;
 };
 
 export const getPropertyFloorArea = (p: any): string | null => {
   if (!p) return null;
-  if (p.floor_size && p.floor_size !== 'floorplans available') return String(p.floor_size);
-  if (p.floorArea && Number(p.floorArea) > 0) return `${p.floorArea}m²`;
+  const raw = p.floor_size || p.floorArea;
+  if (!raw) return null;
+
+  if (typeof raw === 'number' && raw > 0) {
+    return `${raw}m²`;
+  }
+
+  const str = String(raw).trim();
+  if (!str || str.toLowerCase().includes('floorplans available') || str.toLowerCase().includes('contact')) {
+    return null;
+  }
+
+  const match = str.match(/(\d+(?:[.,]\d+)?\s*(?:m²|m2|sqm|sq\s*m|ha|acres?))/i);
+  if (match) {
+    return match[1].replace(/\s+/g, '').replace(/m2/i, 'm²').replace(/sqm/i, 'm²');
+  }
+
+  if (/^\d+(?:[.,]\d+)?$/.test(str)) {
+    return `${str}m²`;
+  }
+
+  if (str.length <= 10 && /\d/.test(str)) {
+    return str;
+  }
+
   return null;
 };
 
