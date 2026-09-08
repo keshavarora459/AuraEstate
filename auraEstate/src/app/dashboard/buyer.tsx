@@ -13,14 +13,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { fetchBookings, fetchPaymentHistory } from '@/services/api';
+import { fetchBookings, fetchPaymentHistory, fetchPropertyById } from '@/services/api';
 import { COLORS } from '@/constants/colors';
 import PaymentModal from '@/components/PaymentModal';
 import AccessRestrictedView from '@/components/AccessRestrictedView';
+import {
+  getPropertyId,
+  getPropertyTitle,
+  getPropertyPrice,
+  getPropertyAddress,
+  getPropertyImages,
+  getPropertyBedrooms,
+  getPropertyBathrooms,
+} from '@/utils/propertyHelper';
+import { getCachedProperty, cacheProperty, findCachedProperty } from '@/utils/propertyCache';
 
 export default function BuyerDashboardScreen() {
   const router = useRouter();
-  const { user, loading: authLoading, savedProperties } = useAuth();
+  const { user, loading: authLoading, savedProperties, toggleSavedProperty } = useAuth();
 
   const isAuthorized = !!user;
 
@@ -29,6 +39,8 @@ export default function BuyerDashboardScreen() {
   const [activeTab, setActiveTab] = useState<'bookings' | 'wishlist' | 'payments'>('bookings');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [wishlistProperties, setWishlistProperties] = useState<any[]>([]);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // Payment Modal
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -59,6 +71,73 @@ export default function BuyerDashboardScreen() {
       setLoading(false);
     }
   }, [user, isAuthorized]);
+
+  // Hydrate saved properties (which can be ID strings or unpopulated objects)
+  useEffect(() => {
+    let isMounted = true;
+
+    const resolveWishlist = async () => {
+      if (!savedProperties || savedProperties.length === 0) {
+        setWishlistProperties([]);
+        return;
+      }
+
+      setWishlistLoading(true);
+      try {
+        const resolvedList = await Promise.all(
+          savedProperties.map(async (item) => {
+            const id = typeof item === 'object' ? getPropertyId(item) : String(item);
+            if (!id) return null;
+
+            // If item already contains title or address and price, use directly
+            if (
+              typeof item === 'object' &&
+              (item.title || item.street_address) &&
+              (item.price || item.price_numeric)
+            ) {
+              cacheProperty(item);
+              return item;
+            }
+
+            // Check cache
+            const cached = getCachedProperty(id) || findCachedProperty(id);
+            if (cached && (cached.title || cached.street_address)) {
+              return cached;
+            }
+
+            // Fetch from API
+            try {
+              const res = await fetchPropertyById(id);
+              if (res.data?.property) {
+                cacheProperty(res.data.property);
+                return res.data.property;
+              }
+            } catch (err) {
+              console.warn(`Failed to fetch wishlist property ${id}:`, err);
+            }
+
+            return typeof item === 'object' ? item : { _id: id, id, title: 'Saved Property' };
+          })
+        );
+
+        if (isMounted) {
+          setWishlistProperties(resolvedList.filter(Boolean));
+        }
+      } catch (e) {
+        console.warn('Error resolving wishlist properties:', e);
+      } finally {
+        if (isMounted) {
+          setWishlistLoading(false);
+        }
+      }
+    };
+
+    resolveWishlist();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [savedProperties]);
 
   const onRefresh = () => {
     if (isAuthorized) {
@@ -227,36 +306,89 @@ export default function BuyerDashboardScreen() {
                   <Text style={styles.sectionCounter}>Saved: {savedProperties.length}</Text>
                 </View>
 
-                {savedProperties.length === 0 ? (
+                {wishlistLoading && wishlistProperties.length === 0 ? (
+                  <View style={{ paddingVertical: 36, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <Text style={{ marginTop: 8, fontSize: 12, color: COLORS.textMuted }}>
+                      Loading saved estates...
+                    </Text>
+                  </View>
+                ) : savedProperties.length === 0 || (wishlistProperties.length === 0 && !wishlistLoading) ? (
                   <View style={styles.emptyCard}>
                     <Ionicons name="heart-outline" size={42} color={COLORS.textMuted} />
                     <Text style={styles.emptyTitle}>Your Wishlist is Empty</Text>
                     <Text style={styles.emptySubtitle}>
                       Save your favorite luxury estates to track prices and schedule inspections.
                     </Text>
+                    <TouchableOpacity
+                      style={styles.actionBtn}
+                      onPress={() => router.push('/(tabs)/explore' as any)}
+                    >
+                      <Text style={styles.actionBtnText}>Explore Properties</Text>
+                    </TouchableOpacity>
                   </View>
                 ) : (
-                  savedProperties.map((p) => (
-                    <TouchableOpacity
-                      key={p._id}
-                      style={styles.itemCard}
-                      onPress={() => router.push(`/property/${p._id}` as any)}
-                    >
-                      <View style={styles.itemHeader}>
-                        {p.images?.[0] && (
-                          <Image source={{ uri: p.images[0] }} style={styles.itemImage} />
-                        )}
-                        <View style={{ flex: 1, marginLeft: 12 }}>
-                          <Text style={styles.itemTitle} numberOfLines={1}>{p.title}</Text>
-                          <Text style={styles.itemAmount}>${p.price?.toLocaleString()}</Text>
-                          <Text style={styles.itemAddress} numberOfLines={1}>
-                            📍 {p.address?.suburb}, {p.address?.state}
-                          </Text>
+                  wishlistProperties.map((p, idx) => {
+                    const propId = getPropertyId(p);
+                    const title = getPropertyTitle(p);
+                    const price = getPropertyPrice(p);
+                    const address = getPropertyAddress(p);
+                    const images = getPropertyImages(p);
+                    const imageUrl = images[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
+                    const beds = getPropertyBedrooms(p);
+                    const baths = getPropertyBathrooms(p);
+
+                    return (
+                      <TouchableOpacity
+                        key={propId || `wishlist-${idx}`}
+                        style={styles.itemCard}
+                        onPress={() => router.push(`/property/${propId}` as any)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.itemHeader}>
+                          {imageUrl ? (
+                            <Image source={{ uri: imageUrl }} style={styles.itemImage} />
+                          ) : (
+                            <View style={[styles.itemImage, styles.imagePlaceholder]}>
+                              <Ionicons name="image-outline" size={24} color={COLORS.textMuted} />
+                            </View>
+                          )}
+                          <View style={{ flex: 1, marginLeft: 12 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={[styles.itemTitle, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
+                                {title}
+                              </Text>
+                              <TouchableOpacity
+                                onPress={() => toggleSavedProperty(propId)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              >
+                                <Ionicons name="heart" size={18} color={COLORS.error} />
+                              </TouchableOpacity>
+                            </View>
+                            <Text style={styles.itemAmount}>{price}</Text>
+                            <Text style={styles.itemAddress} numberOfLines={1}>
+                              📍 {address}
+                            </Text>
+                            {(beds > 0 || baths > 0) && (
+                              <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                                {beds > 0 && (
+                                  <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                                    🛏️ {beds} Beds
+                                  </Text>
+                                )}
+                                {baths > 0 && (
+                                  <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                                    🛁 {baths} Baths
+                                  </Text>
+                                )}
+                              </View>
+                            )}
+                          </View>
+                          <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} style={{ marginLeft: 4 }} />
                         </View>
-                        <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
-                      </View>
-                    </TouchableOpacity>
-                  ))
+                      </TouchableOpacity>
+                    );
+                  })
                 )}
               </View>
             )}

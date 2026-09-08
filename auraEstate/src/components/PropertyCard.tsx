@@ -18,19 +18,22 @@ import {
   getPropertyLandArea,
   getPropertyImages,
 } from '../utils/propertyHelper';
-import { cacheProperty } from '../utils/propertyCache';
+import { cacheProperty, getCachedProperty } from '../utils/propertyCache';
 
 interface PropertyCardProps {
   property: any;
   compact?: boolean;
 }
 
-export const PropertyCard: React.FC<PropertyCardProps> = ({ property, compact = false }) => {
+export const PropertyCard: React.FC<PropertyCardProps> = ({ property: initialProperty, compact = false }) => {
   const router = useRouter();
   const { toggleSavedProperty, isSaved } = useAuth();
 
-  const id = getPropertyId(property);
-  if (property) {
+  const id = getPropertyId(initialProperty);
+  const cached = id ? getCachedProperty(id) : null;
+  const property = (initialProperty?.title || initialProperty?.street_address) ? initialProperty : (cached || initialProperty);
+
+  if (property && (property.title || property.street_address)) {
     cacheProperty(property);
   }
   const saved = isSaved(id);

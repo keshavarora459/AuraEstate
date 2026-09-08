@@ -13,9 +13,57 @@ import { AuraColors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
 import PropertyCard from '../../components/PropertyCard';
 
+import { useState, useEffect } from 'react';
+import { fetchPropertyById } from '../../services/api';
+import { getPropertyId } from '../../utils/propertyHelper';
+import { getCachedProperty, cacheProperty, findCachedProperty } from '../../utils/propertyCache';
+
 export default function WishlistScreen() {
   const router = useRouter();
   const { savedProperties, user, openAuthModal } = useAuth();
+  const [resolvedProperties, setResolvedProperties] = useState<any[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const resolveList = async () => {
+      if (!savedProperties || savedProperties.length === 0) {
+        setResolvedProperties([]);
+        return;
+      }
+
+      const list = await Promise.all(
+        savedProperties.map(async (item) => {
+          const id = typeof item === 'object' ? getPropertyId(item) : String(item);
+          if (!id) return null;
+          if (typeof item === 'object' && (item.title || item.street_address)) {
+            cacheProperty(item);
+            return item;
+          }
+          const cached = getCachedProperty(id) || findCachedProperty(id);
+          if (cached && (cached.title || cached.street_address)) {
+            return cached;
+          }
+          try {
+            const res = await fetchPropertyById(id);
+            if (res.data?.property) {
+              cacheProperty(res.data.property);
+              return res.data.property;
+            }
+          } catch (_) {}
+          return typeof item === 'object' ? item : { _id: id, id };
+        })
+      );
+
+      if (isMounted) {
+        setResolvedProperties(list.filter(Boolean));
+      }
+    };
+
+    resolveList();
+    return () => {
+      isMounted = false;
+    };
+  }, [savedProperties]);
 
   return (
     <SafeAreaView style={styles.safeContainer}>
@@ -67,22 +115,10 @@ export default function WishlistScreen() {
         </View>
       ) : (
         <FlatList
-          data={savedProperties}
-          keyExtractor={(item) => (typeof item === 'object' ? item._id : item)}
+          data={resolvedProperties.length > 0 ? resolvedProperties : savedProperties}
+          keyExtractor={(item, index) => getPropertyId(item) || `saved-${index}`}
           renderItem={({ item }) => (
-            <PropertyCard
-              property={
-                typeof item === 'object'
-                  ? item
-                  : {
-                      _id: item,
-                      title: 'Saved Luxury Property',
-                      price: 1850000,
-                      listingType: 'Sale',
-                      address: { suburb: 'Sydney', state: 'NSW' },
-                    }
-              }
-            />
+            <PropertyCard property={item} />
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
