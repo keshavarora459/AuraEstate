@@ -1,0 +1,8 @@
+{
+  "name": "aura-estate-root",
+  "private": true,
+  "scripts": {
+    "build:apk": "npm --prefix auraEstate run build:apk",
+    "start": "npm --prefix auraEstate start"
+  }
+}
