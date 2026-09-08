@@ -7,12 +7,13 @@ import {
   Pressable,
   TextInput,
   ScrollView,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Image,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
@@ -150,28 +151,49 @@ export const LiveChatModal: React.FC<LiveChatModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.container}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <KeyboardAvoidingView
           style={styles.keyboardContainer}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           {/* Header */}
           <View style={styles.header}>
+            <Pressable
+              onPress={onClose}
+              style={styles.navBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="arrow-back" size={22} color={AuraColors.text} />
+            </Pressable>
+
             <View style={styles.agentInfo}>
               <View style={styles.avatarWrapper}>
                 <Image source={{ uri: recipientAvatar }} style={styles.avatar} />
                 <View style={styles.onlineDot} />
               </View>
-              <View>
-                <Text style={styles.agentName}>{recipientName}</Text>
-                <Text style={styles.agentRole}>
+              <View style={styles.agentTextWrap}>
+                <Text style={styles.agentName} numberOfLines={1}>{recipientName}</Text>
+                <Text style={styles.agentRole} numberOfLines={1}>
                   {property?.title ? property.title : 'Licensed Real Estate Agent'}
                 </Text>
               </View>
             </View>
-            <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={10}>
-              <Ionicons name="close" size={24} color={AuraColors.text} />
+
+            <Pressable
+              onPress={onClose}
+              style={styles.navBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Close chat"
+            >
+              <Ionicons name="close" size={22} color={AuraColors.text} />
             </Pressable>
           </View>
 
@@ -286,39 +308,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+    gap: 8,
+  },
+  navBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   agentInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     flex: 1,
+    marginHorizontal: 4,
+  },
+  agentTextWrap: {
+    flex: 1,
   },
   avatarWrapper: {
     position: 'relative',
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#e2e8f0',
   },
   onlineDot: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
     backgroundColor: AuraColors.emerald,
     borderWidth: 2,
     borderColor: '#ffffff',
   },
   agentName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: AuraColors.text,
   },
@@ -326,10 +362,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: AuraColors.primaryDark,
     fontWeight: '600',
-    maxWidth: 220,
-  },
-  closeBtn: {
-    padding: 6,
   },
   messagesScroll: {
     flex: 1,

@@ -62,7 +62,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, isO
   };
 
   return (
-    <Modal visible={isModalVisible} animationType="slide" transparent presentationStyle="overFullScreen">
+    <Modal
+      visible={isModalVisible}
+      animationType="slide"
+      transparent
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <SafeAreaView style={styles.sheetContainer}>
           <View style={styles.header}>

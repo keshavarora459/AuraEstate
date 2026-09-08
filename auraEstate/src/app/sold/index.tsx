@@ -15,6 +15,15 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../../constants/colors';
 import { fetchSoldProperties } from '../../services/api';
+import {
+  getPropertyId,
+  getPropertyTitle,
+  getPropertyAddress,
+  getPropertyBedrooms,
+  getPropertyBathrooms,
+  getPropertyGarages,
+  getPropertyImages,
+} from '../../utils/propertyHelper';
 
 export default function SoldScreen() {
   const router = useRouter();
@@ -48,19 +57,25 @@ export default function SoldScreen() {
   };
 
   const filtered = soldItems.filter((item) => {
+    const title = getPropertyTitle(item);
+    const address = getPropertyAddress(item);
     return (
-      (item.title || '').toLowerCase().includes(search.toLowerCase()) ||
-      (item.suburb || '').toLowerCase().includes(search.toLowerCase()) ||
-      (item.address || '').toLowerCase().includes(search.toLowerCase())
+      title.toLowerCase().includes(search.toLowerCase()) ||
+      address.toLowerCase().includes(search.toLowerCase())
     );
   }).sort((a, b) => {
-    if (sort === 'date') return new Date(b.soldDate || 0).getTime() - new Date(a.soldDate || 0).getTime();
-    if (sort === 'price_desc') return (b.soldPrice || 0) - (a.soldPrice || 0);
-    if (sort === 'price_asc') return (a.soldPrice || 0) - (b.soldPrice || 0);
+    const priceA = a.soldPrice || a.price_numeric || (typeof a.price === 'number' ? a.price : 0);
+    const priceB = b.soldPrice || b.price_numeric || (typeof b.price === 'number' ? b.price : 0);
+    if (sort === 'date') return new Date(b.soldDate || b.updatedAt || b.created_at || 0).getTime() - new Date(a.soldDate || a.updatedAt || a.created_at || 0).getTime();
+    if (sort === 'price_desc') return priceB - priceA;
+    if (sort === 'price_asc') return priceA - priceB;
     return 0;
   });
 
-  const totalValue = filtered.reduce((acc, curr) => acc + (curr.soldPrice || 0), 0);
+  const totalValue = filtered.reduce((acc, curr) => {
+    const p = curr.soldPrice || curr.price_numeric || (typeof curr.price === 'number' ? curr.price : 650000);
+    return acc + p;
+  }, 0);
 
   return (
     <SafeAreaView style={styles.safeContainer}>
@@ -103,7 +118,7 @@ export default function SoldScreen() {
             onPress={() => setSort('price_desc')}
           >
             <Text style={[styles.sortBtnText, sort === 'price_desc' && styles.sortBtnTextActive]}>
-              Highest $
+              Highest Price
             </Text>
           </Pressable>
           <Pressable
@@ -111,7 +126,7 @@ export default function SoldScreen() {
             onPress={() => setSort('price_asc')}
           >
             <Text style={[styles.sortBtnText, sort === 'price_asc' && styles.sortBtnTextActive]}>
-              Lowest $
+              Lowest Price
             </Text>
           </Pressable>
         </View>
@@ -127,31 +142,47 @@ export default function SoldScreen() {
       {/* Sold List */}
       <FlatList
         data={filtered}
-        keyExtractor={(item) => item.id || item._id}
-        renderItem={({ item }) => (
-          <View style={styles.soldCard}>
-            <Image source={{ uri: item.image }} style={styles.cardImage} />
-            <View style={styles.soldBadge}>
-              <Text style={styles.soldBadgeText}>SOLD</Text>
-            </View>
-            <View style={styles.cardBody}>
-              <Text style={styles.cardPrice}>${((item.soldPrice || 0) / 1000000).toFixed(2)}M</Text>
-              <Text style={styles.cardTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={styles.cardAddress} numberOfLines={1}>
-                {item.address}
-              </Text>
+        keyExtractor={(item) => getPropertyId(item)}
+        renderItem={({ item }) => {
+          const img = getPropertyImages(item)[0];
+          const title = getPropertyTitle(item);
+          const address = getPropertyAddress(item);
+          const beds = getPropertyBedrooms(item);
+          const baths = getPropertyBathrooms(item);
+          const cars = getPropertyGarages(item);
+          const priceNum = item.soldPrice || item.price_numeric || (typeof item.price === 'number' ? item.price : 650000);
+          const priceDisplay = priceNum >= 1000000 ? `$${(priceNum / 1000000).toFixed(2)}M` : `$${priceNum.toLocaleString()}`;
 
-              <View style={styles.specsAndDateRow}>
-                <Text style={styles.specsText}>
-                  {item.bedrooms} Bed • {item.bathrooms} Bath • {item.parking} Car
-                </Text>
-                <Text style={styles.dateText}>Settled {item.soldDate}</Text>
+          return (
+            <Pressable
+              style={styles.soldCard}
+              onPress={() => router.push(`/property/${getPropertyId(item)}` as any)}
+            >
+              <Image source={{ uri: img }} style={styles.cardImage} />
+              <View style={styles.soldBadge}>
+                <Text style={styles.soldBadgeText}>SOLD</Text>
               </View>
-            </View>
-          </View>
-        )}
+              <View style={styles.cardBody}>
+                <Text style={styles.cardPrice}>{priceDisplay}</Text>
+                <Text style={styles.cardTitle} numberOfLines={1}>
+                  {title}
+                </Text>
+                <Text style={styles.cardAddress} numberOfLines={1}>
+                  {address}
+                </Text>
+
+                <View style={styles.specsAndDateRow}>
+                  <Text style={styles.specsText}>
+                    {beds} Bed • {baths} Bath • {cars} Car
+                  </Text>
+                  <Text style={styles.dateText}>
+                    {item.soldDate ? `Settled ${item.soldDate}` : 'Recorded'}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          );
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[AuraColors.primary]} />
         }

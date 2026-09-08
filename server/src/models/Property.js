@@ -113,10 +113,16 @@ const propertySchema = new mongoose.Schema(
       ref: 'User'
     }
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
 propertySchema.index({ location: '2dsphere' });
+propertySchema.index({ status: 1, _id: -1 });
+propertySchema.index({ status: 1, price_numeric: 1 });
+propertySchema.index({ suburb_name: 1, status: 1 });
+propertySchema.index({ 'address.suburb': 1, status: 1 });
+propertySchema.index({ propertyType: 1, status: 1 });
+propertySchema.index({ listingType: 1, status: 1 });
 propertySchema.index({ title: 'text', description: 'text', 'address.suburb': 'text', 'address.city': 'text' });
 
 module.exports = mongoose.model('Property', propertySchema);

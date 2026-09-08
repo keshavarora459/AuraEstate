@@ -18,9 +18,7 @@ import { COLORS } from '@/constants/colors';
 
 const ROLES = [
   { label: 'Buyer / Investor', value: 'buyer', icon: 'home-outline' },
-  { label: 'Seller / Owner', value: 'seller', icon: 'key-outline' },
   { label: 'Licensed Agent', value: 'agent', icon: 'briefcase-outline' },
-  { label: 'Agency Principal', value: 'agency', icon: 'business-outline' },
 ];
 
 export default function RegisterScreen() {
@@ -31,7 +29,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('buyer');
+  const [role, setRole] = useState<'buyer' | 'agent'>('buyer');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -60,12 +58,8 @@ export default function RegisterScreen() {
           router.replace('/(tabs)' as any);
         } else if (u.role === 'super_admin' || u.role === 'admin') {
           router.replace('/dashboard/admin' as any);
-        } else if (u.role === 'agency') {
-          router.replace('/dashboard/agency' as any);
         } else if (u.role === 'agent') {
           router.replace('/dashboard/agent' as any);
-        } else if (u.role === 'seller') {
-          router.replace('/dashboard/seller' as any);
         } else {
           router.replace('/dashboard/buyer' as any);
         }
@@ -146,7 +140,7 @@ export default function RegisterScreen() {
                     <TouchableOpacity
                       key={r.value}
                       style={[styles.roleCard, isSelected && styles.roleCardActive]}
-                      onPress={() => setRole(r.value)}
+                      onPress={() => setRole(r.value as any)}
                     >
                       <Ionicons
                         name={r.icon as any}
@@ -376,30 +370,29 @@ const styles = StyleSheet.create({
   },
   roleGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   roleCard: {
-    width: '48.5%',
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.cardDark,
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: COLORS.borderDark,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     gap: 8,
   },
   roleCardActive: {
     borderColor: COLORS.primary,
-    backgroundColor: 'rgba(14, 165, 233, 0.1)',
+    backgroundColor: 'rgba(14, 165, 233, 0.12)',
   },
   roleText: {
-    fontSize: 12,
+    fontSize: 13,
     color: COLORS.textMuted,
     fontWeight: '600',
-    flex: 1,
   },
   roleTextActive: {
     color: COLORS.primary,

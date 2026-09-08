@@ -44,12 +44,8 @@ export default function LoginScreen() {
           router.replace('/(tabs)' as any);
         } else if (u.role === 'super_admin' || u.role === 'admin') {
           router.replace('/dashboard/admin' as any);
-        } else if (u.role === 'agency') {
-          router.replace('/dashboard/agency' as any);
         } else if (u.role === 'agent') {
           router.replace('/dashboard/agent' as any);
-        } else if (u.role === 'seller') {
-          router.replace('/dashboard/seller' as any);
         } else {
           router.replace('/dashboard/buyer' as any);
         }

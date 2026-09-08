@@ -144,6 +144,16 @@ function mapSupabaseProperty(row) {
  * Fetch properties from Supabase with filtering, search, pagination & sorting.
  */
 async function getSupabaseProperties(filters) {
+  if (!supabase) {
+    return {
+      properties: [],
+      total: 0,
+      totalPages: 0,
+      currentPage: 1,
+      count: 0
+    };
+  }
+
   const {
     search,
     suburb,
@@ -243,6 +253,7 @@ async function getSupabaseProperties(filters) {
  * Fetch a single property by its Supabase id.
  */
 async function getSupabasePropertyById(id) {
+  if (!supabase || !id) return null;
   const { data, error } = await supabase
     .from('properties')
     .select('*')
@@ -257,6 +268,7 @@ async function getSupabasePropertyById(id) {
  * Fetch similar properties (same state).
  */
 async function getSimilarSupabaseProperties(id, limit) {
+  if (!supabase || !id) return [];
   const limitNum = limit || 3;
   const source = await getSupabasePropertyById(id);
   if (!source) return [];

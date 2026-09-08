@@ -5,50 +5,50 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 
+import {
+  getPropertyId,
+  getPropertyTitle,
+  getPropertyPrice,
+  getPropertyAddress,
+  getPropertyType,
+  getListingType,
+  getPropertyBedrooms,
+  getPropertyBathrooms,
+  getPropertyGarages,
+  getPropertyLandArea,
+  getPropertyImages,
+} from '../utils/propertyHelper';
+import { cacheProperty } from '../utils/propertyCache';
+
 interface PropertyCardProps {
-  property: {
-    _id: string;
-    title: string;
-    price?: number;
-    pricePeriod?: string;
-    listingType?: string;
-    propertyType?: string;
-    address?: {
-      street?: string;
-      suburb?: string;
-      city?: string;
-      state?: string;
-      postcode?: string;
-    };
-    bedrooms?: number;
-    bathrooms?: number;
-    parkingSpaces?: number;
-    landArea?: number;
-    images?: string[];
-    tier?: string;
-    status?: string;
-  };
+  property: any;
   compact?: boolean;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({ property, compact = false }) => {
   const router = useRouter();
   const { toggleSavedProperty, isSaved } = useAuth();
-  const saved = isSaved(property._id);
 
-  const fallbackImage = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800';
-  const imageUrl = property.images && property.images.length > 0 ? property.images[0] : fallbackImage;
+  const id = getPropertyId(property);
+  if (property) {
+    cacheProperty(property);
+  }
+  const saved = isSaved(id);
 
-  const formatPrice = () => {
-    if (!property.price) return 'Contact Agent';
-    const num = property.price.toLocaleString();
-    if (property.listingType === 'Rent' || property.pricePeriod === 'weekly') {
-      return `$${num} / wk`;
-    }
-    return `$${num}`;
-  };
+  const images = getPropertyImages(property);
+  const imageUrl = images[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
 
-  const isSold = property.status === 'Sold';
+  const title = getPropertyTitle(property);
+  const priceDisplay = getPropertyPrice(property);
+  const addressDisplay = getPropertyAddress(property);
+  const propType = getPropertyType(property);
+  const listingType = getListingType(property);
+  const isSold = listingType === 'Sold';
+
+  const bedrooms = getPropertyBedrooms(property);
+  const bathrooms = getPropertyBathrooms(property);
+  const garages = getPropertyGarages(property);
+  const landArea = getPropertyLandArea(property);
 
   return (
     <Pressable
@@ -57,7 +57,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, compact = 
         compact && styles.compactCard,
         pressed && styles.cardPressed,
       ]}
-      onPress={() => router.push(`/property/${property._id}` as any)}
+      onPress={() => {
+        cacheProperty(property);
+        router.push(`/property/${id}` as any);
+      }}
     >
       {/* Image Container */}
       <View style={[styles.imageContainer, compact && styles.compactImageContainer]}>
@@ -68,12 +71,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, compact = 
         <View style={styles.badgeRow}>
           <View style={[styles.badge, isSold ? styles.soldBadge : styles.listingTypeBadge]}>
             <Text style={[styles.badgeText, isSold ? styles.soldBadgeText : styles.listingTypeBadgeText]}>
-              {isSold ? 'SOLD' : property.listingType === 'Sale' ? 'BUY' : property.listingType || 'FOR SALE'}
+              {isSold ? 'SOLD' : listingType === 'Sale' ? 'BUY' : listingType.toUpperCase()}
             </Text>
           </View>
-          {property.propertyType && (
+          {propType && (
             <View style={styles.propTypeBadge}>
-              <Text style={styles.propTypeBadgeText}>{property.propertyType}</Text>
+              <Text style={styles.propTypeBadgeText}>{propType}</Text>
             </View>
           )}
         </View>
@@ -83,7 +86,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, compact = 
           style={[styles.heartButton, saved && styles.heartButtonActive]}
           onPress={(e) => {
             e.stopPropagation?.();
-            toggleSavedProperty(property._id);
+            toggleSavedProperty(id);
           }}
           hitSlop={8}
         >
@@ -98,47 +101,39 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, compact = 
       {/* Content Body */}
       <View style={styles.body}>
         {/* Price */}
-        <Text style={styles.priceText}>{formatPrice()}</Text>
+        <Text style={styles.priceText}>{priceDisplay}</Text>
 
         {/* Title */}
         <Text style={styles.titleText} numberOfLines={1}>
-          {property.title}
+          {title}
         </Text>
 
         {/* Location */}
         <View style={styles.locationRow}>
           <Ionicons name="location-sharp" size={14} color={AuraColors.primary} />
           <Text style={styles.locationText} numberOfLines={1}>
-            {property.address?.suburb
-              ? `${property.address?.suburb}, ${property.address?.state || 'Australia'}`
-              : 'Australia'}
+            {addressDisplay}
           </Text>
         </View>
 
         {/* Specs Row */}
         <View style={styles.specsRow}>
-          {property.bedrooms !== undefined && (
-            <View style={styles.specItem}>
-              <Ionicons name="bed-outline" size={15} color={AuraColors.textMuted} />
-              <Text style={styles.specText}>{property.bedrooms} Beds</Text>
-            </View>
-          )}
-          {property.bathrooms !== undefined && (
-            <View style={styles.specItem}>
-              <Ionicons name="water-outline" size={15} color={AuraColors.textMuted} />
-              <Text style={styles.specText}>{property.bathrooms} Baths</Text>
-            </View>
-          )}
-          {property.parkingSpaces !== undefined && (
-            <View style={styles.specItem}>
-              <Ionicons name="car-outline" size={15} color={AuraColors.textMuted} />
-              <Text style={styles.specText}>{property.parkingSpaces} Cars</Text>
-            </View>
-          )}
-          {property.landArea !== undefined && property.landArea > 0 && (
+          <View style={styles.specItem}>
+            <Ionicons name="bed-outline" size={15} color={AuraColors.textMuted} />
+            <Text style={styles.specText}>{bedrooms} Beds</Text>
+          </View>
+          <View style={styles.specItem}>
+            <Ionicons name="water-outline" size={15} color={AuraColors.textMuted} />
+            <Text style={styles.specText}>{bathrooms} Baths</Text>
+          </View>
+          <View style={styles.specItem}>
+            <Ionicons name="car-outline" size={15} color={AuraColors.textMuted} />
+            <Text style={styles.specText}>{garages} {garages > 1 ? 'Cars' : 'Car'}</Text>
+          </View>
+          {landArea && (
             <View style={styles.specItem}>
               <Ionicons name="scan-outline" size={15} color={AuraColors.textMuted} />
-              <Text style={styles.specText}>{property.landArea}m²</Text>
+              <Text style={styles.specText}>{landArea}</Text>
             </View>
           )}
         </View>

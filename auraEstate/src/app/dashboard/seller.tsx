@@ -24,10 +24,13 @@ import {
 import { COLORS } from '@/constants/colors';
 import AddPropertyModal from '@/components/AddPropertyModal';
 import PaymentModal from '@/components/PaymentModal';
+import AccessRestrictedView from '@/components/AccessRestrictedView';
 
 export default function SellerDashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
+
+  const isAuthorized = !!user && (user.role === 'seller' || user.role === 'agent' || user.role === 'agency' || user.role === 'admin' || user.role === 'super_admin');
 
   const [properties, setProperties] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -63,15 +66,29 @@ export default function SellerDashboardScreen() {
   };
 
   useEffect(() => {
-    if (user && user.role === 'seller') {
+    if (isAuthorized) {
       loadData();
+    } else {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, isAuthorized]);
 
   const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
+    if (isAuthorized) {
+      setRefreshing(true);
+      loadData();
+    }
   };
+
+  if (!isAuthorized) {
+    return (
+      <AccessRestrictedView
+        portalTitle="Seller Dashboard"
+        requiredRoleLabel="Verified Seller"
+        currentUserRole={user?.role}
+      />
+    );
+  }
 
   const handlePropertyAdded = (newProperty: any) => {
     setProperties(prev => [newProperty, ...prev]);

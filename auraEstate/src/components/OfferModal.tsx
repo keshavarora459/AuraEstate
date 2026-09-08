@@ -79,7 +79,13 @@ export const OfferModal: React.FC<OfferModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <SafeAreaView style={styles.sheetContainer}>
           {/* Header */}

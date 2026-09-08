@@ -184,7 +184,13 @@ export const AddPropertyModal: React.FC<AddPropertyModalProps> = ({
   };
 
   return (
-    <Modal visible={isModalVisible} animationType="slide" transparent presentationStyle="overFullScreen">
+    <Modal
+      visible={isModalVisible}
+      animationType="slide"
+      transparent
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <SafeAreaView style={styles.sheetContainer}>
           {/* Header */}

@@ -36,7 +36,13 @@ export const AppraisalReportModal: React.FC<AppraisalReportModalProps> = ({
   const rangeHigh = finalVal.high || exec.estimated_value_range?.high || 0;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <SafeAreaView style={styles.sheetContainer}>
           {/* Header */}

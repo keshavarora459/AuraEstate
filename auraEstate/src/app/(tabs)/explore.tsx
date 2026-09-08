@@ -17,6 +17,7 @@ import { AuraColors } from '../../constants/colors';
 import { fetchProperties } from '../../services/api';
 import PropertyCard from '../../components/PropertyCard';
 import PropertyFiltersModal, { FilterState } from '../../components/PropertyFiltersModal';
+import { getPropertyId, getPropertyBathrooms, getPropertyGarages } from '../../utils/propertyHelper';
 
 export default function ExploreScreen() {
   const router = useRouter();
@@ -71,10 +72,10 @@ export default function ExploreScreen() {
 
         // Client side filters if backend query didn't filter
         if (activeFilters.bathrooms) {
-          results = results.filter((p: any) => p.bathrooms >= parseInt(activeFilters.bathrooms));
+          results = results.filter((p: any) => getPropertyBathrooms(p) >= parseInt(activeFilters.bathrooms));
         }
         if (activeFilters.parking) {
-          results = results.filter((p: any) => (p.parkingSpaces || 0) >= parseInt(activeFilters.parking));
+          results = results.filter((p: any) => getPropertyGarages(p) >= parseInt(activeFilters.parking));
         }
 
         setProperties(results);
@@ -239,7 +240,7 @@ export default function ExploreScreen() {
       ) : (
         <FlatList
           data={properties}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => getPropertyId(item)}
           renderItem={({ item }) => <PropertyCard property={item} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

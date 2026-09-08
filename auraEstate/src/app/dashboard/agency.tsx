@@ -18,10 +18,13 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAgencyById, registerUser, fetchAgents } from '@/services/api';
 import { COLORS } from '@/constants/colors';
+import AccessRestrictedView from '@/components/AccessRestrictedView';
 
 export default function AgencyDashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
+
+  const isAuthorized = !!user && (user.role === 'agency' || user.role === 'admin' || user.role === 'super_admin');
 
   const [agencyData, setAgencyData] = useState<any>(null);
   const [agents, setAgents] = useState<any[]>([]);
@@ -59,13 +62,29 @@ export default function AgencyDashboardScreen() {
   };
 
   useEffect(() => {
-    loadData();
-  }, [user]);
+    if (isAuthorized) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [user, isAuthorized]);
 
   const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
+    if (isAuthorized) {
+      setRefreshing(true);
+      loadData();
+    }
   };
+
+  if (!isAuthorized) {
+    return (
+      <AccessRestrictedView
+        portalTitle="Agency Brokerage Portal"
+        requiredRoleLabel="Agency Principal"
+        currentUserRole={user?.role}
+      />
+    );
+  }
 
   const handleInviteAgent = async () => {
     if (!agentName.trim() || !agentEmail.trim()) {

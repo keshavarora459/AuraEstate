@@ -27,10 +27,13 @@ import { COLORS } from '@/constants/colors';
 import InboxPanel from '@/components/InboxPanel';
 import AddPropertyModal from '@/components/AddPropertyModal';
 import EditProfileModal from '@/components/EditProfileModal';
+import AccessRestrictedView from '@/components/AccessRestrictedView';
 
 export default function AgentDashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
+
+  const isAuthorized = !!user && (user.role === 'agent' || user.role === 'agency' || user.role === 'admin' || user.role === 'super_admin');
 
   const [properties, setProperties] = useState<any[]>([]);
   const [inquiries, setInquiries] = useState<any[]>([]);
@@ -66,15 +69,29 @@ export default function AgentDashboardScreen() {
   };
 
   useEffect(() => {
-    if (user && user.role === 'agent') {
+    if (isAuthorized) {
       loadData();
+    } else {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, isAuthorized]);
 
   const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
+    if (isAuthorized) {
+      setRefreshing(true);
+      loadData();
+    }
   };
+
+  if (!isAuthorized) {
+    return (
+      <AccessRestrictedView
+        portalTitle="Agent CRM & Performance"
+        requiredRoleLabel="Licensed Agent"
+        currentUserRole={user?.role}
+      />
+    );
+  }
 
   const handleMarkAsRead = async (id: string) => {
     try {

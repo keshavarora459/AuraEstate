@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -13,11 +14,49 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
 import EditProfileModal from '../../components/EditProfileModal';
+import {
+  canAccessPortal,
+  PORTAL_CONFIG,
+  DashboardPortal,
+  getRoleDisplayLabel,
+} from '../../utils/accessControl';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, openAuthModal } = useAuth();
   const [editProfileOpen, setEditProfileOpen] = useState<boolean>(false);
+
+  const handlePortalPress = (portalKey: DashboardPortal) => {
+    const config = PORTAL_CONFIG[portalKey];
+    if (!config) return;
+
+    if (!user) {
+      Alert.alert(
+        'Sign In Required',
+        `Please sign in to access the ${config.title}.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => router.push('/auth/login' as any) },
+        ]
+      );
+      return;
+    }
+
+    const hasAccess = canAccessPortal(user.role, portalKey);
+    if (!hasAccess) {
+      Alert.alert(
+        'Access Restricted',
+        `You are currently signed in as ${getRoleDisplayLabel(user.role)} (${user.role.toUpperCase()}).\n\nThe ${config.title} is restricted to: ${config.requiredRoleLabel}.`,
+        [
+          { text: 'OK', style: 'default' },
+          { text: 'Switch Account', onPress: () => router.push('/auth/login' as any) },
+        ]
+      );
+      return;
+    }
+
+    router.push(config.route as any);
+  };
 
   const getDashboardRoute = () => {
     if (!user) return '/auth/login';
@@ -25,12 +64,8 @@ export default function ProfileScreen() {
       case 'super_admin':
       case 'admin':
         return '/dashboard/admin';
-      case 'agency':
-        return '/dashboard/agency';
       case 'agent':
         return '/dashboard/agent';
-      case 'seller':
-        return '/dashboard/seller';
       default:
         return '/dashboard/buyer';
     }
@@ -74,7 +109,7 @@ export default function ProfileScreen() {
             >
               <Ionicons name="speedometer-outline" size={20} color="#ffffff" />
               <Text style={styles.primaryDashboardBtnText}>
-                Launch My {user.role ? user.role.toUpperCase() : ''} Portal
+                Launch My {user.role ? user.role.toUpperCase().replace('_', ' ') : 'PORTAL'}
               </Text>
               <Ionicons name="chevron-forward" size={18} color="#ffffff" style={{ marginLeft: 'auto' }} />
             </Pressable>
@@ -106,81 +141,95 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Role Portal Explorer (Access any portal for full parity testing) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ALL ROLE DASHBOARDS</Text>
-          <View style={styles.menuBox}>
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => router.push('/dashboard/buyer' as any)}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: AuraColors.primaryLight }]}>
-                <Ionicons name="home" size={18} color={AuraColors.primaryDark} />
-              </View>
-              <View style={styles.menuTextWrap}>
-                <Text style={styles.menuItemTitle}>Buyer & Renter Portal</Text>
-                <Text style={styles.menuItemSub}>Offers, inspection bookings, deposits</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={AuraColors.textLight} />
-            </Pressable>
+        {/* Role Portal Explorer (Only visible when user is logged in with access) */}
+        {user && (() => {
+          const portalItems = [
+            {
+              key: 'buyer' as DashboardPortal,
+              title: 'Buyer & Renter Portal',
+              sub: 'Offers, inspection bookings, deposits',
+              icon: 'home' as const,
+              iconBg: AuraColors.primaryLight,
+              iconColor: AuraColors.primaryDark,
+              badgeBg: AuraColors.primaryLight,
+              badgeColor: AuraColors.primaryDark,
+              badgeText: 'Active',
+            },
+            {
+              key: 'agent' as DashboardPortal,
+              title: 'Agent CRM & Performance',
+              sub: 'Leads pipeline, live chat inbox, listings',
+              icon: 'briefcase' as const,
+              iconBg: AuraColors.violetLight,
+              iconColor: AuraColors.violet,
+              badgeBg: AuraColors.violetLight,
+              badgeColor: AuraColors.violet,
+              badgeText: 'Agent',
+            },
+            {
+              key: 'admin' as DashboardPortal,
+              title: 'System Admin Operations',
+              sub: 'Metrics, property approvals, users, CSV',
+              icon: 'shield-checkmark' as const,
+              iconBg: AuraColors.amberLight,
+              iconColor: AuraColors.amber,
+              badgeBg: AuraColors.amberLight,
+              badgeColor: AuraColors.amber,
+              badgeText: 'Admin',
+            },
+          ];
 
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => router.push('/dashboard/seller' as any)}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: AuraColors.emeraldLight }]}>
-                <Ionicons name="pricetag" size={18} color={AuraColors.emerald} />
-              </View>
-              <View style={styles.menuTextWrap}>
-                <Text style={styles.menuItemTitle}>Seller Dashboard</Text>
-                <Text style={styles.menuItemSub}>Listings management, received offers</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={AuraColors.textLight} />
-            </Pressable>
+          const accessiblePortals = portalItems.filter(item =>
+            canAccessPortal(user.role, item.key)
+          );
 
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => router.push('/dashboard/agent' as any)}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: AuraColors.violetLight }]}>
-                <Ionicons name="briefcase" size={18} color={AuraColors.violet} />
-              </View>
-              <View style={styles.menuTextWrap}>
-                <Text style={styles.menuItemTitle}>Agent CRM & Performance</Text>
-                <Text style={styles.menuItemSub}>Leads pipeline, live chat inbox, KPIs</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={AuraColors.textLight} />
-            </Pressable>
+          if (accessiblePortals.length === 0) return null;
 
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => router.push('/dashboard/agency' as any)}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: AuraColors.cyanLight }]}>
-                <Ionicons name="business" size={18} color={AuraColors.cyan} />
+          return (
+            <View style={styles.section}>
+              <View style={styles.sectionTitleRow}>
+                <Text style={styles.sectionTitle}>ROLE DASHBOARDS</Text>
+                <View style={styles.rbacPill}>
+                  <Ionicons name="shield-checkmark" size={12} color={AuraColors.primaryDark} />
+                  <Text style={styles.rbacPillText}>Role-Based Access</Text>
+                </View>
               </View>
-              <View style={styles.menuTextWrap}>
-                <Text style={styles.menuItemTitle}>Agency Brokerage Portal</Text>
-                <Text style={styles.menuItemSub}>Team roster, invite agents, portfolio</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={AuraColors.textLight} />
-            </Pressable>
 
-            <Pressable
-              style={[styles.menuItem, { borderBottomWidth: 0 }]}
-              onPress={() => router.push('/dashboard/admin' as any)}
-            >
-              <View style={[styles.menuIconCircle, { backgroundColor: AuraColors.amberLight }]}>
-                <Ionicons name="shield-checkmark" size={18} color={AuraColors.amber} />
+              <View style={styles.menuBox}>
+                {accessiblePortals.map((item, index) => {
+                  const isLast = index === accessiblePortals.length - 1;
+                  return (
+                    <Pressable
+                      key={item.key}
+                      style={[styles.menuItem, isLast ? { borderBottomWidth: 0 } : null]}
+                      onPress={() => handlePortalPress(item.key)}
+                    >
+                      <View style={[styles.menuIconCircle, { backgroundColor: item.iconBg }]}>
+                        <Ionicons name={item.icon} size={18} color={item.iconColor} />
+                      </View>
+                      <View style={styles.menuTextWrap}>
+                        <View style={styles.titleRow}>
+                          <Text style={styles.menuItemTitle}>{item.title}</Text>
+                          <View style={[styles.accessBadge, { backgroundColor: item.badgeBg }]}>
+                            <Text style={[styles.accessBadgeText, { color: item.badgeColor }]}>
+                              {item.badgeText}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.menuItemSub}>{item.sub}</Text>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={18}
+                        color={AuraColors.textLight}
+                      />
+                    </Pressable>
+                  );
+                })}
               </View>
-              <View style={styles.menuTextWrap}>
-                <Text style={styles.menuItemTitle}>System Admin Operations</Text>
-                <Text style={styles.menuItemSub}>Metrics, property approvals, users, CSV</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={AuraColors.textLight} />
-            </Pressable>
-          </View>
-        </View>
+            </View>
+          );
+        })()}
 
         {/* Directory & Content Shortcuts */}
         <View style={styles.section}>
@@ -449,6 +498,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: AuraColors.text,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  rbacPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: AuraColors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  rbacPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: AuraColors.primaryDark,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  accessBadge: {
+    backgroundColor: AuraColors.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  accessBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: AuraColors.primaryDark,
+  },
+  lockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  lockBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: AuraColors.textMuted,
   },
   signOutBtn: {
     flexDirection: 'row',

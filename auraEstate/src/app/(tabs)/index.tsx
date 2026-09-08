@@ -297,20 +297,25 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.blogsList}>
-          {blogs.slice(0, 2).map((blog) => (
+          {blogs.slice(0, 2).map((blog, idx) => (
             <Pressable
-              key={blog._id}
+              key={blog._id || blog.id || idx}
               style={styles.blogCard}
               onPress={() => router.push('/blogs' as any)}
             >
-              <Image source={{ uri: blog.image }} style={styles.blogImage} />
+              <Image
+                source={{
+                  uri: blog.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800',
+                }}
+                style={styles.blogImage}
+              />
               <View style={styles.blogBody}>
                 <Text style={styles.blogCategory}>{blog.category || 'Insights'}</Text>
                 <Text style={styles.blogTitle} numberOfLines={2}>
-                  {blog.title}
+                  {blog.title || 'Market Update'}
                 </Text>
                 <Text style={styles.blogExcerpt} numberOfLines={2}>
-                  {blog.excerpt}
+                  {blog.excerpt || blog.content || ''}
                 </Text>
               </View>
             </Pressable>
@@ -665,51 +670,64 @@ const styles = StyleSheet.create({
     color: AuraColors.textMuted,
   },
   agentCallout: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#ffffff',
     borderRadius: 24,
-    padding: 20,
+    borderWidth: 1.5,
+    borderColor: '#e0f2fe',
+    padding: 22,
     marginBottom: 24,
     alignItems: 'center',
     textAlign: 'center',
+    shadowColor: AuraColors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
   },
   agentCalloutBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(14, 165, 233, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: '#e0f2fe',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: 12,
     marginBottom: 10,
   },
   agentCalloutBadgeText: {
-    color: AuraColors.primary,
+    color: AuraColors.primaryDark,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   agentCalloutTitle: {
-    color: '#ffffff',
+    color: AuraColors.text,
     fontSize: 18,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 6,
   },
   agentCalloutDesc: {
-    color: '#94a3b8',
+    color: AuraColors.textMuted,
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 16,
+    paddingHorizontal: 8,
   },
   agentCalloutBtn: {
     backgroundColor: AuraColors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 22,
+    paddingVertical: 13,
     borderRadius: 14,
+    shadowColor: AuraColors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 2,
   },
   agentCalloutBtnText: {
     color: '#ffffff',

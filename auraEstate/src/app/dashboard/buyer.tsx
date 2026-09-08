@@ -17,10 +17,13 @@ import { fetchOffers, fetchBookings, fetchPaymentHistory } from '@/services/api'
 import { COLORS } from '@/constants/colors';
 import InboxPanel from '@/components/InboxPanel';
 import PaymentModal from '@/components/PaymentModal';
+import AccessRestrictedView from '@/components/AccessRestrictedView';
 
 export default function BuyerDashboardScreen() {
   const router = useRouter();
   const { user, loading: authLoading, savedProperties } = useAuth();
+
+  const isAuthorized = !!user;
 
   const [offers, setOffers] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
@@ -54,15 +57,29 @@ export default function BuyerDashboardScreen() {
   };
 
   useEffect(() => {
-    if (user && user.role === 'buyer') {
+    if (isAuthorized) {
       loadData();
+    } else {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, isAuthorized]);
 
   const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
+    if (isAuthorized) {
+      setRefreshing(true);
+      loadData();
+    }
   };
+
+  if (!isAuthorized) {
+    return (
+      <AccessRestrictedView
+        portalTitle="Buyer & Renter Portal"
+        requiredRoleLabel="Registered User"
+        currentUserRole={user ? (user as any).role : null}
+      />
+    );
+  }
 
   const handleOpenPayment = (propId: string | null = null, pkg = 'Holding Deposit', amt = 5000) => {
     setSelectedPropertyId(propId);

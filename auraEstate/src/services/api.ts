@@ -3,23 +3,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
+import { cacheProperties, cacheProperty } from '../utils/propertyCache';
+
+const DEFAULT_FALLBACK_API_URL = 'https://aura-estate-tau.vercel.app/api';
 
 export const getBaseUrl = (): string => {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL || '';
+  const envUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_FALLBACK_API_URL;
   const trimmed = envUrl.trim();
   if (trimmed) {
     return trimmed.endsWith('/api') ? trimmed : `${trimmed.replace(/\/$/, '')}/api`;
   }
-  return '';
+  return DEFAULT_FALLBACK_API_URL;
 };
 
 export const getSocketUrl = (): string => {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL || '';
+  const envUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_FALLBACK_API_URL;
   const trimmed = envUrl.trim();
   if (trimmed) {
     return trimmed.replace(/\/api\/?$/, '').replace(/\/$/, '');
   }
-  return '';
+  return 'https://aura-estate-tau.vercel.app';
 };
 
 const api = axios.create({
@@ -84,9 +87,30 @@ export const toggleWishlist = (propertyId: string) => api.post(`/auth/wishlist/$
 // ==========================================
 // Properties API
 // ==========================================
-export const fetchProperties = (params?: any) => api.get('/properties', { params });
-export const fetchSoldProperties = (params?: any) => api.get('/properties/sold', { params });
-export const fetchPropertyById = (id: string) => api.get(`/properties/${id}`);
+export const fetchProperties = async (params?: any) => {
+  const res = await api.get('/properties', { params });
+  if (res.data?.properties) {
+    cacheProperties(res.data.properties);
+  }
+  return res;
+};
+
+export const fetchSoldProperties = async (params?: any) => {
+  const res = await api.get('/properties/sold', { params });
+  if (res.data?.properties) {
+    cacheProperties(res.data.properties);
+  }
+  return res;
+};
+
+export const fetchPropertyById = async (id: string) => {
+  const res = await api.get(`/properties/${id}`);
+  if (res.data?.property) {
+    cacheProperty(res.data.property);
+  }
+  return res;
+};
+
 export const fetchSimilarProperties = (id: string) => api.get(`/properties/${id}/similar`);
 export const createProperty = (data: any) => api.post('/properties', data);
 export const updateProperty = (id: string, data: any) => api.put(`/properties/${id}`, data);

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,6 +26,25 @@ import InspectionBookingModal from '../../components/InspectionBookingModal';
 import PaymentModal from '../../components/PaymentModal';
 import LiveChatModal from '../../components/LiveChatModal';
 
+import {
+  getPropertyId,
+  getPropertyTitle,
+  getPropertyPrice,
+  getPropertyNumericPrice,
+  getPropertyAddress,
+  getPropertySuburb,
+  getPropertyType,
+  getListingType,
+  getPropertyBedrooms,
+  getPropertyBathrooms,
+  getPropertyGarages,
+  getPropertyLandArea,
+  getPropertyFloorArea,
+  getPropertyImages,
+  getPropertyAgent,
+} from '../../utils/propertyHelper';
+import { getCachedProperty, cacheProperty } from '../../utils/propertyCache';
+
 const { width } = Dimensions.get('window');
 
 const NEARBY_SCHOOLS = [
@@ -38,10 +58,11 @@ export default function PropertyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { toggleSavedProperty, isSaved } = useAuth();
 
-  const [property, setProperty] = useState<any | null>(null);
+  const cached = getCachedProperty(id);
+  const [property, setProperty] = useState<any | null>(cached);
   const [similarProperties, setSimilarProperties] = useState<any[]>([]);
   const [activeImage, setActiveImage] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!cached);
 
   // Modals state
   const [appraisalReport, setAppraisalReport] = useState<any | null>(null);
@@ -56,17 +77,31 @@ export default function PropertyDetailScreen() {
   useEffect(() => {
     if (!id) return;
 
-    const loadDetail = async () => {
+    const initial = getCachedProperty(id);
+    if (initial) {
+      setProperty(initial);
+      setLoading(false);
+    } else {
       setLoading(true);
-      try {
-        const res = await fetchPropertyById(id);
-        if (res.data?.success) {
-          setProperty(res.data.property);
-        }
+    }
 
-        const simRes = await fetchSimilarProperties(id).catch(() => ({ data: { success: false } }));
-        if (simRes.data?.success) {
-          setSimilarProperties(simRes.data.properties || []);
+    const loadDetail = async () => {
+      try {
+        const propPromise = fetchPropertyById(id);
+        const simPromise = fetchSimilarProperties(id).catch(() => ({ data: { success: false } }));
+
+        const res = await propPromise;
+        if (res.data?.success && res.data.property) {
+          setProperty(res.data.property);
+          cacheProperty(res.data.property);
+        }
+        // Immediately dismiss loading state once property details arrive
+        setLoading(false);
+
+        // Populate similar properties in background without blocking
+        const simRes = await simPromise;
+        if (simRes.data?.success && simRes.data.properties) {
+          setSimilarProperties(simRes.data.properties);
         }
       } catch (err) {
         console.error('Failed to load property details', err);
@@ -87,10 +122,10 @@ export default function PropertyDetailScreen() {
         setAppraisalReport(res.data.report);
         setAppraisalModalOpen(true);
       } else {
-        alert('Could not generate appraisal report.');
+        Alert.alert('Appraisal Notice', 'Could not generate appraisal report.');
       }
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Error generating AI appraisal.');
+      Alert.alert('Appraisal Error', e.response?.data?.message || 'Error generating AI appraisal.');
     } finally {
       setAppraisalLoading(false);
     }
@@ -122,24 +157,22 @@ export default function PropertyDetailScreen() {
     );
   }
 
-  const saved = isSaved(property._id);
-  const images =
-    property.images && property.images.length > 0
-      ? property.images
-      : ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1200'];
-
-  const formattedPrice = property.price
-    ? `$${property.price.toLocaleString()}${
-        property.listingType === 'Rent' || property.pricePeriod === 'weekly' ? ' / week' : ''
-      }`
-    : 'Contact Agent';
-
-  const agent = property.agentId || {
-    name: 'Samantha Reed',
-    role: 'Lead Sales Agent',
-    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=300',
-    phone: '+61 480 089 451',
-  };
+  const propId = getPropertyId(property);
+  const saved = isSaved(propId);
+  const images = getPropertyImages(property);
+  const formattedPrice = getPropertyPrice(property);
+  const numericPrice = getPropertyNumericPrice(property);
+  const title = getPropertyTitle(property);
+  const address = getPropertyAddress(property);
+  const suburb = getPropertySuburb(property);
+  const propertyType = getPropertyType(property);
+  const listingType = getListingType(property);
+  const bedrooms = getPropertyBedrooms(property);
+  const bathrooms = getPropertyBathrooms(property);
+  const garages = getPropertyGarages(property);
+  const landArea = getPropertyLandArea(property);
+  const floorArea = getPropertyFloorArea(property);
+  const agent = getPropertyAgent(property);
 
   return (
     <SafeAreaView style={styles.safeContainer}>
@@ -150,7 +183,7 @@ export default function PropertyDetailScreen() {
         </Pressable>
         <Pressable
           style={[styles.navCircleBtn, saved && styles.navCircleBtnSaved]}
-          onPress={() => toggleSavedProperty(property._id)}
+          onPress={() => toggleSavedProperty(propId)}
         >
           <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? '#ffffff' : AuraColors.text} />
         </Pressable>
@@ -187,19 +220,18 @@ export default function PropertyDetailScreen() {
           <View style={styles.badgeRow}>
             <View style={styles.listingBadge}>
               <Text style={styles.listingBadgeText}>
-                {property.listingType === 'Sale' ? 'BUY' : property.listingType} • {property.propertyType}
+                {listingType === 'Sale' ? 'BUY' : listingType.toUpperCase()} • {propertyType}
               </Text>
             </View>
             <Text style={styles.priceText}>{formattedPrice}</Text>
           </View>
 
-          <Text style={styles.titleText}>{property.title}</Text>
+          <Text style={styles.titleText}>{title}</Text>
 
           <View style={styles.addressRow}>
             <Ionicons name="location" size={16} color={AuraColors.primary} />
             <Text style={styles.addressText}>
-              {property.address?.street}, {property.address?.suburb} {property.address?.state}{' '}
-              {property.address?.postcode}
+              {address}
             </Text>
           </View>
         </View>
@@ -208,27 +240,41 @@ export default function PropertyDetailScreen() {
         <View style={styles.specsBar}>
           <View style={styles.specColumn}>
             <Ionicons name="bed-outline" size={20} color={AuraColors.primary} />
-            <Text style={styles.specVal}>{property.bedrooms || 3}</Text>
+            <Text style={styles.specVal}>{bedrooms}</Text>
             <Text style={styles.specUnit}>Beds</Text>
           </View>
           <View style={styles.specColumn}>
             <Ionicons name="water-outline" size={20} color={AuraColors.primary} />
-            <Text style={styles.specVal}>{property.bathrooms || 2}</Text>
+            <Text style={styles.specVal}>{bathrooms}</Text>
             <Text style={styles.specUnit}>Baths</Text>
           </View>
           <View style={styles.specColumn}>
             <Ionicons name="car-outline" size={20} color={AuraColors.primary} />
-            <Text style={styles.specVal}>{property.parkingSpaces || 1}</Text>
-            <Text style={styles.specUnit}>Cars</Text>
+            <Text style={styles.specVal}>{garages}</Text>
+            <Text style={styles.specUnit}>{garages > 1 ? 'Cars' : 'Car'}</Text>
           </View>
-          <View style={styles.specColumn}>
-            <Ionicons name="scan-outline" size={20} color={AuraColors.primary} />
-            <Text style={styles.specVal}>{property.landArea || 450}m²</Text>
-            <Text style={styles.specUnit}>Land</Text>
-          </View>
+          {landArea ? (
+            <View style={styles.specColumn}>
+              <Ionicons name="scan-outline" size={20} color={AuraColors.primary} />
+              <Text style={styles.specVal}>{landArea}</Text>
+              <Text style={styles.specUnit}>Land</Text>
+            </View>
+          ) : floorArea ? (
+            <View style={styles.specColumn}>
+              <Ionicons name="business-outline" size={20} color={AuraColors.primary} />
+              <Text style={styles.specVal}>{floorArea}</Text>
+              <Text style={styles.specUnit}>Floor</Text>
+            </View>
+          ) : (
+            <View style={styles.specColumn}>
+              <Ionicons name="scan-outline" size={20} color={AuraColors.primary} />
+              <Text style={styles.specVal}>Modern</Text>
+              <Text style={styles.specUnit}>Design</Text>
+            </View>
+          )}
           <View style={styles.specColumn}>
             <Ionicons name="calendar-outline" size={20} color={AuraColors.primary} />
-            <Text style={styles.specVal}>{property.yearBuilt || 2022}</Text>
+            <Text style={styles.specVal}>{property.yearBuilt || '2024'}</Text>
             <Text style={styles.specUnit}>Built</Text>
           </View>
         </View>
@@ -290,7 +336,9 @@ export default function PropertyDetailScreen() {
         {/* About Property */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>About the Property</Text>
-          <Text style={styles.descriptionText}>{property.description}</Text>
+          <Text style={styles.descriptionText}>
+            {property.description || property.ai_description || 'Stunning luxury residence in prime location.'}
+          </Text>
         </View>
 
         {/* Property Attributes Table */}
@@ -298,23 +346,30 @@ export default function PropertyDetailScreen() {
           <Text style={styles.sectionTitle}>Property Details</Text>
           <View style={styles.tableRow}>
             <Text style={styles.tableLabel}>Property Type</Text>
-            <Text style={styles.tableValue}>{property.propertyType}</Text>
+            <Text style={styles.tableValue}>{propertyType}</Text>
           </View>
           <View style={styles.tableRow}>
             <Text style={styles.tableLabel}>Listing Intent</Text>
-            <Text style={styles.tableValue}>{property.listingType}</Text>
+            <Text style={styles.tableValue}>{listingType}</Text>
           </View>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableLabel}>Land Size</Text>
-            <Text style={styles.tableValue}>{property.landArea || 450} m²</Text>
-          </View>
+          {landArea ? (
+            <View style={styles.tableRow}>
+              <Text style={styles.tableLabel}>Land Size</Text>
+              <Text style={styles.tableValue}>{landArea}</Text>
+            </View>
+          ) : floorArea ? (
+            <View style={styles.tableRow}>
+              <Text style={styles.tableLabel}>Floor Size</Text>
+              <Text style={styles.tableValue}>{floorArea}</Text>
+            </View>
+          ) : null}
           <View style={styles.tableRow}>
             <Text style={styles.tableLabel}>Council Rates</Text>
             <Text style={styles.tableValue}>$450 / quarter (approx)</Text>
           </View>
           <View style={[styles.tableRow, { borderBottomWidth: 0 }]}>
             <Text style={styles.tableLabel}>Year Built</Text>
-            <Text style={styles.tableValue}>{property.yearBuilt || 2022}</Text>
+            <Text style={styles.tableValue}>{property.yearBuilt || '2024'}</Text>
           </View>
         </View>
 
@@ -354,14 +409,14 @@ export default function PropertyDetailScreen() {
         </View>
 
         {/* Mortgage / EMI Calculator */}
-        <EMICalculator defaultPrice={property.price || 1500000} />
+        <EMICalculator defaultPrice={numericPrice || 650000} />
 
         {/* Agent Contact Card */}
         <View style={styles.agentCard}>
           <Image source={{ uri: agent.avatar }} style={styles.agentAvatar} />
           <View style={styles.agentInfo}>
             <Text style={styles.agentName}>{agent.name}</Text>
-            <Text style={styles.agentRole}>{property.agencyId?.name || 'Verified Sales Executive'}</Text>
+            <Text style={styles.agentRole}>{agent.agency}</Text>
           </View>
           <View style={styles.agentActionsRow}>
             <Pressable style={styles.agentCallBtn} onPress={() => handleCallAgent(agent.phone)}>
@@ -376,14 +431,14 @@ export default function PropertyDetailScreen() {
         </View>
 
         {/* Suburb Insights Link */}
-        {property.address?.suburb && (
+        {suburb && suburb !== 'Australia' && (
           <Pressable
             style={styles.suburbInsightsBtn}
-            onPress={() => router.push(`/suburbs/${encodeURIComponent(property.address.suburb)}` as any)}
+            onPress={() => router.push(`/suburbs/${encodeURIComponent(suburb)}` as any)}
           >
             <Ionicons name="stats-chart" size={18} color={AuraColors.primaryDark} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.suburbInsightsTitle}>Explore {property.address.suburb} Suburb Profile</Text>
+              <Text style={styles.suburbInsightsTitle}>Explore {suburb} Suburb Profile</Text>
               <Text style={styles.suburbInsightsSub}>Median prices, annual growth rates, and demographics</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={AuraColors.primaryDark} />
@@ -396,7 +451,7 @@ export default function PropertyDetailScreen() {
             <Text style={styles.sectionTitle}>Similar Properties</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
               {similarProperties.map((p) => (
-                <PropertyCard key={p._id} property={p} compact />
+                <PropertyCard key={getPropertyId(p)} property={p} compact />
               ))}
             </ScrollView>
           </View>

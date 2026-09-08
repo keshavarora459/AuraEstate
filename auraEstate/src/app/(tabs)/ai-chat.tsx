@@ -135,13 +135,7 @@ export default function AIChatScreen() {
             <View style={styles.aiAvatar}>
               <Ionicons name="sparkles" size={18} color="#ffffff" />
             </View>
-            <View>
-              <Text style={styles.headerTitle}>Aura AI Concierge</Text>
-              <View style={styles.onlineRow}>
-                <View style={styles.onlineDot} />
-                <Text style={styles.onlineText}>Connected to Live Database</Text>
-              </View>
-            </View>
+            <Text style={styles.headerTitle}>Aura AI Concierge</Text>
           </View>
 
           <Pressable style={styles.resetBtn} onPress={handleReset}>
@@ -256,23 +250,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
     color: AuraColors.text,
-  },
-  onlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: AuraColors.emerald,
-  },
-  onlineText: {
-    fontSize: 10,
-    color: AuraColors.emerald,
-    fontWeight: '700',
   },
   resetBtn: {
     padding: 8,

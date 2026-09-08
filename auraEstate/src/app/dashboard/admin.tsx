@@ -27,12 +27,15 @@ import {
   fetchAdminInquiries,
 } from '@/services/api';
 import { COLORS } from '@/constants/colors';
+import AccessRestrictedView from '@/components/AccessRestrictedView';
 
-const ROLE_OPTIONS = ['buyer', 'seller', 'agent', 'agency', 'admin'];
+const ROLE_OPTIONS = ['buyer', 'agent', 'admin'];
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
+
+  const isAuthorized = !!user && (user.role === 'admin' || user.role === 'super_admin');
 
   const [metrics, setMetrics] = useState<any>(null);
   const [pendingProperties, setPendingProperties] = useState<any[]>([]);
@@ -74,13 +77,29 @@ export default function AdminDashboardScreen() {
   };
 
   useEffect(() => {
-    loadAdminData();
-  }, []);
+    if (isAuthorized) {
+      loadAdminData();
+    } else {
+      setLoading(false);
+    }
+  }, [user, isAuthorized]);
 
   const onRefresh = () => {
-    setRefreshing(true);
-    loadAdminData();
+    if (isAuthorized) {
+      setRefreshing(true);
+      loadAdminData();
+    }
   };
+
+  if (!isAuthorized) {
+    return (
+      <AccessRestrictedView
+        portalTitle="System Admin Operations"
+        requiredRoleLabel="System Administrator"
+        currentUserRole={user?.role}
+      />
+    );
+  }
 
   const handleApprove = async (propId: string) => {
     try {
