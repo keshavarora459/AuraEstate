@@ -21,7 +21,6 @@ export default function FindAgentsScreen() {
   const router = useRouter();
   const [agents, setAgents] = useState<any[]>([]);
   const [search, setSearch] = useState<string>('');
-  const [locationFilter, setLocationFilter] = useState<string>('All');
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -40,21 +39,18 @@ export default function FindAgentsScreen() {
     load();
   }, []);
 
-  const locations = ['All', 'NSW', 'VIC', 'QLD', 'ACT', 'WA'];
-
   const filteredAgents = agents.filter((a) => {
+    const query = search.toLowerCase();
     const matchSearch =
       !search ||
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      (a.specialties && a.specialties.some((s: string) => s.toLowerCase().includes(search.toLowerCase()))) ||
-      (a.licenseNumber && a.licenseNumber.toLowerCase().includes(search.toLowerCase()));
+      (a.name && a.name.toLowerCase().includes(query)) ||
+      (a.specialties && a.specialties.some((s: string) => s.toLowerCase().includes(query))) ||
+      (a.licenseNumber && a.licenseNumber.toLowerCase().includes(query)) ||
+      (a.location && a.location.toLowerCase().includes(query)) ||
+      (a.address?.state && a.address.state.toLowerCase().includes(query)) ||
+      (a.address?.suburb && a.address.suburb.toLowerCase().includes(query));
 
-    const matchLocation =
-      locationFilter === 'All' ||
-      (a.location && a.location.includes(locationFilter)) ||
-      (a.address?.state && a.address.state.includes(locationFilter));
-
-    return matchSearch && matchLocation;
+    return matchSearch;
   });
 
   const handleBack = () => {
@@ -96,21 +92,6 @@ export default function FindAgentsScreen() {
             onChangeText={setSearch}
           />
         </View>
-
-        {/* State filter chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.stateChipsScroll}>
-          {locations.map((loc) => (
-            <Pressable
-              key={loc}
-              style={[styles.stateChip, locationFilter === loc && styles.stateChipActive]}
-              onPress={() => setLocationFilter(loc)}
-            >
-              <Text style={[styles.stateChipText, locationFilter === loc && styles.stateChipTextActive]}>
-                {loc}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
       </View>
 
       {loading ? (
@@ -253,27 +234,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     color: AuraColors.text,
-  },
-  stateChipsScroll: {
-    marginTop: 10,
-  },
-  stateChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: '#f1f5f9',
-    marginRight: 8,
-  },
-  stateChipActive: {
-    backgroundColor: AuraColors.primary,
-  },
-  stateChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: AuraColors.textSecondary,
-  },
-  stateChipTextActive: {
-    color: '#ffffff',
   },
   centerLoader: {
     flex: 1,
