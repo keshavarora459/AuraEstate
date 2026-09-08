@@ -453,7 +453,7 @@ export default function PropertyDetailScreen() {
           <View style={styles.buyPropertyCard}>
             <View style={styles.buyPropertyHeader}>
               <View style={styles.buyBadge}>
-                <Ionicons name="key" size={13} color="#ffffff" />
+                <Ionicons name="key" size={13} color={AuraColors.primaryDark} />
                 <Text style={styles.buyBadgeText}>BUYER ACQUISITION</Text>
               </View>
               <Text style={styles.buyPropertyTitle}>Ready to Buy This Home?</Text>
@@ -934,40 +934,47 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buyPropertyCard: {
-    backgroundColor: '#0f172a',
-    borderRadius: 22,
-    padding: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: AuraColors.cardBorder,
+    padding: 18,
     marginHorizontal: 16,
     marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   buyPropertyHeader: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   buyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: AuraColors.primary,
+    backgroundColor: AuraColors.primaryLight,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
     marginBottom: 8,
   },
   buyBadgeText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
-    color: '#ffffff',
+    color: AuraColors.primaryDark,
     letterSpacing: 0.5,
   },
   buyPropertyTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
-    color: '#ffffff',
+    color: AuraColors.text,
   },
   buyPropertySubtitle: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: AuraColors.textMuted,
     marginTop: 4,
     lineHeight: 16,
   },
@@ -977,12 +984,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
   },
   buyPropertyCardBtnText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
   },
   bottomBar: {
