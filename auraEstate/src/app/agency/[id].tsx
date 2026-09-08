@@ -50,12 +50,26 @@ export default function AgencyDetailScreen() {
     );
   }
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/agency');
+    }
+  };
+
   if (!agencyData || !agencyData.agency) {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <Ionicons name="alert-circle-outline" size={48} color={AuraColors.rose} />
         <Text style={styles.notFoundTitle}>Agency Profile Not Found</Text>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+        <Pressable
+          style={styles.backBtn}
+          onPress={handleBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Text style={styles.backBtnText}>Go Back</Text>
         </Pressable>
       </SafeAreaView>
@@ -68,8 +82,14 @@ export default function AgencyDetailScreen() {
     <SafeAreaView style={styles.safeContainer}>
       {/* Header Bar */}
       <View style={styles.header}>
-        <Pressable style={styles.iconBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color={AuraColors.text} />
+        <Pressable
+          style={styles.iconBtn}
+          onPress={handleBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={22} color={AuraColors.text} />
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {agency.name}
@@ -203,7 +223,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   iconBtn: {
-    padding: 4,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,

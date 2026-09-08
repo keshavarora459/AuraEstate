@@ -21,11 +21,25 @@ export default function AccessRestrictedView({
 
   const isGuest = !currentUserRole;
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={handleBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="arrow-back" size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Access Control</Text>
@@ -89,8 +103,9 @@ export default function AccessRestrictedView({
 
           <TouchableOpacity
             style={styles.secondaryBtn}
-            onPress={() => router.back()}
+            onPress={handleBack}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="arrow-back-outline" size={18} color={COLORS.textPrimary} />
             <Text style={styles.secondaryBtnText}>Go Back</Text>

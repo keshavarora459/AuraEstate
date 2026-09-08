@@ -11,8 +11,9 @@ import {
   Linking,
   Platform,
   Alert,
+  StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../../constants/colors';
@@ -53,6 +54,15 @@ export default function PropertyDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, toggleSavedProperty, isSaved } = useAuth();
+  const insets = useSafeAreaInsets();
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
 
   const cached = getCachedProperty(id);
   const [property, setProperty] = useState<any | null>(cached);
@@ -146,7 +156,13 @@ export default function PropertyDetailScreen() {
       <SafeAreaView style={styles.centerContainer}>
         <Ionicons name="alert-circle-outline" size={48} color={AuraColors.rose} />
         <Text style={styles.notFoundTitle}>Property Not Found</Text>
-        <Pressable style={styles.backHomeBtn} onPress={() => router.back()}>
+        <Pressable
+          style={styles.backHomeBtn}
+          onPress={handleBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Text style={styles.backHomeBtnText}>Go Back</Text>
         </Pressable>
       </SafeAreaView>
@@ -170,18 +186,32 @@ export default function PropertyDetailScreen() {
   const floorArea = getPropertyFloorArea(property);
   const agent = getPropertyAgent(property);
 
+  const topNavOffset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 20
+  ) + 8;
+
   return (
-    <SafeAreaView style={styles.safeContainer}>
+    <SafeAreaView style={styles.safeContainer} edges={['bottom', 'left', 'right']}>
       {/* Top Floating Nav Bar */}
-      <View style={styles.topNav}>
-        <Pressable style={styles.navCircleBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color={AuraColors.text} />
+      <View style={[styles.topNav, { top: topNavOffset }]}>
+        <Pressable
+          style={styles.navCircleBtn}
+          onPress={handleBack}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={22} color={AuraColors.text} />
         </Pressable>
         <Pressable
           style={[styles.navCircleBtn, saved && styles.navCircleBtnSaved]}
           onPress={() => toggleSavedProperty(propId)}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+          accessibilityRole="button"
+          accessibilityLabel="Save property"
         >
-          <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? '#ffffff' : AuraColors.text} />
+          <Ionicons name={saved ? 'heart' : 'heart-outline'} size={22} color={saved ? '#ffffff' : AuraColors.text} />
         </Pressable>
       </View>
 
@@ -467,25 +497,26 @@ const styles = StyleSheet.create({
   },
   topNav: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 44 : 20,
     left: 16,
     right: 16,
-    zIndex: 20,
+    zIndex: 50,
+    elevation: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   navCircleBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 6,
   },
   navCircleBtnSaved: {
     backgroundColor: AuraColors.rose,

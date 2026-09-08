@@ -77,12 +77,26 @@ export default function SoldScreen() {
     return acc + p;
   }, 0);
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeContainer}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color={AuraColors.text} />
+        <Pressable
+          style={styles.backBtn}
+          onPress={handleBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={22} color={AuraColors.text} />
         </Pressable>
         <View style={styles.headerTextWrap}>
           <Text style={styles.headerTitle}>Recently Sold</Text>
@@ -221,7 +235,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backBtn: {
-    padding: 6,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTextWrap: {
     flex: 1,
