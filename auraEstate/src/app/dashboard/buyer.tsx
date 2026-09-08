@@ -13,9 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { fetchOffers, fetchBookings, fetchPaymentHistory } from '@/services/api';
+import { fetchBookings, fetchPaymentHistory } from '@/services/api';
 import { COLORS } from '@/constants/colors';
-import InboxPanel from '@/components/InboxPanel';
 import PaymentModal from '@/components/PaymentModal';
 import AccessRestrictedView from '@/components/AccessRestrictedView';
 
@@ -25,10 +24,9 @@ export default function BuyerDashboardScreen() {
 
   const isAuthorized = !!user;
 
-  const [offers, setOffers] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'offers' | 'messages' | 'bookings' | 'wishlist' | 'payments'>('offers');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'wishlist' | 'payments'>('bookings');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -40,12 +38,10 @@ export default function BuyerDashboardScreen() {
 
   const loadData = async () => {
     try {
-      const [oRes, bRes, txRes] = await Promise.all([
-        fetchOffers().catch(() => ({ data: { success: false, offers: [] } })),
+      const [bRes, txRes] = await Promise.all([
         fetchBookings().catch(() => ({ data: { success: false, bookings: [] } })),
         fetchPaymentHistory().catch(() => ({ data: { success: false, transactions: [] } })),
       ]);
-      if (oRes.data?.success) setOffers(oRes.data.offers || []);
       if (bRes.data?.success) setBookings(bRes.data.bookings || []);
       if (txRes.data?.success) setTransactions(txRes.data.transactions || []);
     } catch (err) {
@@ -133,29 +129,6 @@ export default function BuyerDashboardScreen() {
       {/* Tabs */}
       <View style={styles.tabsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 'offers' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('offers')}
-          >
-            <Text style={[styles.tabText, activeTab === 'offers' && styles.tabTextActive]}>
-              Offers ({offers.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 'messages' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('messages')}
-          >
-            <Ionicons
-              name="chatbubbles-outline"
-              size={14}
-              color={activeTab === 'messages' ? '#ffffff' : COLORS.textMuted}
-              style={{ marginRight: 4 }}
-            />
-            <Text style={[styles.tabText, activeTab === 'messages' && styles.tabTextActive]}>
-              Live Chat
-            </Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === 'bookings' && styles.tabBtnActive]}
@@ -196,108 +169,6 @@ export default function BuyerDashboardScreen() {
           <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
         ) : (
           <>
-            {/* TAB: OFFERS */}
-            {activeTab === 'offers' && (
-              <View style={styles.tabSection}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Submitted Offers</Text>
-                  <Text style={styles.sectionCounter}>Total: {offers.length}</Text>
-                </View>
-
-                {offers.length === 0 ? (
-                  <View style={styles.emptyCard}>
-                    <Ionicons name="pricetag-outline" size={42} color={COLORS.textMuted} />
-                    <Text style={styles.emptyTitle}>No Offers Submitted Yet</Text>
-                    <Text style={styles.emptySubtitle}>
-                      When you browse properties and tap "Make an Offer", your proposals will appear here.
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => router.push('/(tabs)/explore' as any)}
-                    >
-                      <Text style={styles.actionBtnText}>Explore Properties</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  offers.map((offer) => (
-                    <View key={offer._id} style={styles.itemCard}>
-                      <View style={styles.itemHeader}>
-                        {offer.propertyId?.images?.[0] ? (
-                          <Image
-                            source={{ uri: offer.propertyId.images[0] }}
-                            style={styles.itemImage}
-                          />
-                        ) : (
-                          <View style={[styles.itemImage, styles.imagePlaceholder]}>
-                            <Ionicons name="image-outline" size={24} color={COLORS.textMuted} />
-                          </View>
-                        )}
-                        <View style={{ flex: 1, marginLeft: 12 }}>
-                          <Text style={styles.itemTitle} numberOfLines={1}>
-                            {offer.propertyId?.title || 'Property Offer'}
-                          </Text>
-                          <Text style={styles.itemAmount}>
-                            Offered: ${offer.offerAmount?.toLocaleString()}
-                          </Text>
-                          {offer.propertyId?.address && (
-                            <Text style={styles.itemAddress} numberOfLines={1}>
-                              📍 {offer.propertyId.address.street}, {offer.propertyId.address.suburb}
-                            </Text>
-                          )}
-                          <Text style={styles.itemSubtext}>
-                            Conditions: {offer.conditions || 'None'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.itemFooter}>
-                        <View
-                          style={[
-                            styles.statusPill,
-                            offer.status === 'Accepted'
-                              ? styles.statusAccepted
-                              : offer.status === 'Rejected'
-                              ? styles.statusRejected
-                              : styles.statusPending,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.statusPillText,
-                              offer.status === 'Accepted'
-                                ? styles.statusAcceptedText
-                                : offer.status === 'Rejected'
-                                ? styles.statusRejectedText
-                                : styles.statusPendingText,
-                            ]}
-                          >
-                            {offer.status}
-                          </Text>
-                        </View>
-
-                        <TouchableOpacity
-                          style={styles.payDepositBtn}
-                          onPress={() => handleOpenPayment(offer.propertyId?._id, 'Holding Deposit', 5000)}
-                        >
-                          <Ionicons name="lock-closed" size={12} color="#ffffff" />
-                          <Text style={styles.payDepositBtnText}>Pay Deposit ($5,000)</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))
-                )}
-              </View>
-            )}
-
-            {/* TAB: MESSAGES */}
-            {activeTab === 'messages' && (
-              <View style={styles.tabSection}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Agent & Seller Communications</Text>
-                </View>
-                <InboxPanel />
-              </View>
-            )}
 
             {/* TAB: BOOKINGS */}
             {activeTab === 'bookings' && (
