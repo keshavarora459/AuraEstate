@@ -9,12 +9,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AuraColors } from '../../constants/colors';
-import { sendAIChatPrompt } from '../../services/api';
+import { sendAIChatPrompt, fetchProperties } from '../../services/api';
+import { AIMessageRenderer } from '../../components/ai/AIMessageRenderer';
 
 const QUICK_PROMPTS = [
   'Show me all properties for sale',
@@ -48,6 +50,24 @@ export default function AIChatScreen() {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, [messages, loading]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+    return () => {
+      showSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchProperties().catch(() => {});
+  }, []);
 
   const handleSend = async (textToSend?: string) => {
     const query = (textToSend || input).trim();
@@ -101,33 +121,12 @@ export default function AIChatScreen() {
     ]);
   };
 
-  // Helper to extract property links from AI text if present
-  const renderMessageContent = (text: string) => {
-    // Check for property ID patterns or markdown links
-    const propIdMatch = text.match(/\/properties\/([a-fA-F0-9]{24})/);
-    const propId = propIdMatch ? propIdMatch[1] : null;
-
-    return (
-      <View>
-        <Text style={styles.bubbleText}>{text}</Text>
-        {propId && (
-          <Pressable
-            style={styles.propertyLinkBtn}
-            onPress={() => router.push(`/property/${propId}` as any)}
-          >
-            <Ionicons name="home-outline" size={14} color="#ffffff" />
-            <Text style={styles.propertyLinkText}>View Recommended Property →</Text>
-          </Pressable>
-        )}
-      </View>
-    );
-  };
-
   return (
-    <SafeAreaView style={styles.safeContainer}>
+    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -145,7 +144,12 @@ export default function AIChatScreen() {
 
         {/* Quick Suggestion Pills */}
         <View style={styles.quickPromptsBar}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickPromptsScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickPromptsScroll}
+            keyboardShouldPersistTaps="handled"
+          >
             {QUICK_PROMPTS.map((prompt) => (
               <Pressable
                 key={prompt}
@@ -164,6 +168,8 @@ export default function AIChatScreen() {
           style={styles.messagesScroll}
           contentContainerStyle={styles.messagesContainer}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
         >
           {messages.map((msg) => {
             const isMe = msg.sender === 'user';
@@ -172,13 +178,14 @@ export default function AIChatScreen() {
                 key={msg.id}
                 style={[styles.messageBubble, isMe ? styles.userBubble : styles.aiBubble]}
               >
-                {!isMe && (
-                  <View style={styles.aiBadgeRow}>
-                    <Ionicons name="sparkles" size={12} color={AuraColors.primaryDark} />
-                    <Text style={styles.aiBadgeText}>Aura Real Estate AI</Text>
-                  </View>
+                {isMe ? (
+                  <Text style={styles.userBubbleText}>{msg.text}</Text>
+                ) : (
+                  <AIMessageRenderer
+                    text={msg.text}
+                    onNavigateProperty={(id) => router.push(`/property/${id}` as any)}
+                  />
                 )}
-                {renderMessageContent(msg.text)}
               </View>
             );
           })}
@@ -288,14 +295,21 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   messageBubble: {
-    maxWidth: '85%',
-    padding: 14,
     borderRadius: 18,
   },
   userBubble: {
     alignSelf: 'flex-end',
     backgroundColor: AuraColors.primary,
     borderBottomRightRadius: 4,
+    maxWidth: '82%',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  userBubbleText: {
+    color: '#ffffff',
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '600',
   },
   aiBubble: {
     alignSelf: 'flex-start',
@@ -303,43 +317,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderBottomLeftRadius: 4,
+    maxWidth: '92%',
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
-  },
-  aiBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 6,
-  },
-  aiBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: AuraColors.primaryDark,
-    letterSpacing: 0.5,
-  },
-  bubbleText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: AuraColors.text,
-  },
-  propertyLinkBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: AuraColors.primaryDark,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    marginTop: 10,
-  },
-  propertyLinkText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '800',
   },
   loadingBubble: {
     flexDirection: 'row',

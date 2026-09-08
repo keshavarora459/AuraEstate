@@ -43,7 +43,7 @@ import {
   getPropertyImages,
   getPropertyAgent,
 } from '../../utils/propertyHelper';
-import { getCachedProperty, cacheProperty } from '../../utils/propertyCache';
+import { getCachedProperty, cacheProperty, isKnownMockId } from '../../utils/propertyCache';
 
 const { width } = Dimensions.get('window');
 
@@ -92,6 +92,11 @@ export default function PropertyDetailScreen() {
     }
 
     const loadDetail = async () => {
+      // If it is a synthetic or mock property, do not trigger network calls that 404
+      if (initial?.isSynthetic || isKnownMockId(id)) {
+        setLoading(false);
+        return;
+      }
       try {
         const propPromise = fetchPropertyById(id);
         const simPromise = fetchSimilarProperties(id).catch(() => ({ data: { success: false } }));
