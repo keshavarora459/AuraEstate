@@ -19,11 +19,8 @@ import { AuraColors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
 import { fetchPropertyById, fetchSimilarProperties, generatePropertyAppraisal } from '../../services/api';
 import PropertyCard from '../../components/PropertyCard';
-import EMICalculator from '../../components/EMICalculator';
 import AppraisalReportModal from '../../components/AppraisalReportModal';
-import OfferModal from '../../components/OfferModal';
 import InspectionBookingModal from '../../components/InspectionBookingModal';
-import PaymentModal from '../../components/PaymentModal';
 import LiveChatModal from '../../components/LiveChatModal';
 
 import {
@@ -69,9 +66,7 @@ export default function PropertyDetailScreen() {
   const [appraisalModalOpen, setAppraisalModalOpen] = useState<boolean>(false);
   const [appraisalLoading, setAppraisalLoading] = useState<boolean>(false);
 
-  const [offerModalOpen, setOfferModalOpen] = useState<boolean>(false);
   const [bookingModalOpen, setBookingModalOpen] = useState<boolean>(false);
-  const [paymentModalOpen, setPaymentModalOpen] = useState<boolean>(false);
   const [chatModalOpen, setChatModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
@@ -412,8 +407,6 @@ export default function PropertyDetailScreen() {
           ))}
         </View>
 
-        {/* Mortgage / EMI Calculator */}
-        <EMICalculator defaultPrice={numericPrice || 650000} />
 
         {/* Agent Contact Card */}
         <View style={styles.agentCard}>
@@ -462,40 +455,16 @@ export default function PropertyDetailScreen() {
         )}
       </ScrollView>
 
-      {/* Fixed Bottom Action Bar */}
-      <View style={styles.bottomBar}>
-        <Pressable style={styles.offerActionBtn} onPress={() => setOfferModalOpen(true)}>
-          <Ionicons name="document-text-outline" size={18} color={AuraColors.primaryDark} />
-          <Text style={styles.offerActionBtnText}>Make Offer</Text>
-        </Pressable>
-        <Pressable style={styles.reserveActionBtn} onPress={() => setPaymentModalOpen(true)}>
-          <Ionicons name="lock-closed" size={16} color="#ffffff" />
-          <Text style={styles.reserveActionBtnText}>Reserve ($5k)</Text>
-        </Pressable>
-      </View>
-
       {/* Modals */}
       <AppraisalReportModal
         visible={appraisalModalOpen}
         onClose={() => setAppraisalModalOpen(false)}
         reportData={appraisalReport}
       />
-      <OfferModal
-        visible={offerModalOpen}
-        onClose={() => setOfferModalOpen(false)}
-        property={property}
-      />
       <InspectionBookingModal
         visible={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
         property={property}
-      />
-      <PaymentModal
-        visible={paymentModalOpen}
-        onClose={() => setPaymentModalOpen(false)}
-        defaultPackage="Holding Deposit"
-        defaultAmount={5000}
-        propertyId={property._id}
       />
       <LiveChatModal
         visible={chatModalOpen}
@@ -570,7 +539,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
   galleryContainer: {
     width: '100%',
@@ -951,61 +920,5 @@ const styles = StyleSheet.create({
   similarSection: {
     marginHorizontal: 16,
     marginTop: 20,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 14,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  offerActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: AuraColors.primaryLight,
-    borderWidth: 1,
-    borderColor: AuraColors.primary,
-  },
-  offerActionBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: AuraColors.primaryDark,
-  },
-  reserveActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: AuraColors.primary,
-    shadowColor: AuraColors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  reserveActionBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#ffffff',
   },
 });
