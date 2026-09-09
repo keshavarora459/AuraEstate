@@ -35,6 +35,7 @@ on:
           - development
           - preview-simulator
 
+
 jobs:
   validate:
     name: Lint & Type Validation
@@ -73,7 +74,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
+        
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
