@@ -1,0 +1,101 @@
+name: AuraEstate Mobile CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'auraEstate/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'auraEstate/**'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Build Platform'
+        required: true
+        default: 'android'
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+      profile:
+        description: 'EAS Build Profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+          - development
+          - preview-simulator
+
+jobs:
+  validate:
+    name: Lint & Type Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./auraEstate
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: auraEstate/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run TypeScript Check
+        run: npx tsc --noEmit
+
+  eas-build:
+    name: EAS Cloud Build
+    needs: validate
+    # Only build on manual dispatch or direct push to main (never on pull requests)
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./auraEstate
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: auraEstate/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Setup Expo and EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Trigger EAS Build (Workflow Dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          eas build --platform ${{ github.event.inputs.platform }} --profile ${{ github.event.inputs.profile }} --non-interactive
+
+      - name: Trigger EAS Build (Push to Main)
+        if: github.event_name == 'push'
+        run: |
+          eas build --platform android --profile preview --non-interactive
