@@ -70,6 +70,8 @@ jobs:
     defaults:
       run:
         working-directory: ./auraEstate
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
     steps:
       - name: Checkout Repository
